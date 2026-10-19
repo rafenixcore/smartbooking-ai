@@ -31,6 +31,9 @@
 - ✅ Error Boundary global + Toast notifications
 
 ### 🤖 IA Conversacional
+
+> **Estado en la demo pública:** la capa de IA está desactivada (`AI_ENABLED=false`, sin `OPENAI_API_KEY` configurada). La demo funciona con el menú guiado determinístico. El código de NLU está completo y se activa con `AI_ENABLED=true` más una clave de API compatible con OpenAI.
+
 - ✅ Hybrid Orchestrator: menú guiado → NLU → handler determinístico
 - ✅ 6 handlers de intención: Book, Cancel, Check, Modify, BusinessInfo, Calendar
 - ✅ Parseo de fechas y horas en español con flow_interpreter
