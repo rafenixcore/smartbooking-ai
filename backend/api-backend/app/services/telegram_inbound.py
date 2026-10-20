@@ -481,6 +481,8 @@ async def process_telegram_update(payload: dict) -> dict:
         )
         return {"status": "ok"}
 
-    except Exception as e:
-        print(f"Error en telegram_inbound: {e}")
-        return {"status": "error", "message": str(e)}
+    except Exception:
+        # El detalle queda en el log. Devolverlo al cliente filtraba datos
+        # internos —incluida la URL de la API de Telegram con el token del bot—.
+        logger.exception("Error en telegram_inbound")
+        return {"status": "error"}

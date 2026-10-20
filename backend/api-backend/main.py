@@ -349,6 +349,6 @@ async def whatsapp_webhook(request: Request):
         )
         return {"status": "ok"}
 
-    except Exception as e:
-        print(f"Error en webhook: {e}")
-        return {"status": "error", "message": str(e)}
+    except Exception:
+        logger.exception("Error en webhook WhatsApp")
+        return {"status": "error"}
