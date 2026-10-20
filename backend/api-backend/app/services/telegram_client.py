@@ -11,6 +11,15 @@ from app.config import config
 logger = logging.getLogger(__name__)
 
 
+class TelegramSendError(RuntimeError):
+    """Fallo al enviar a Telegram, sin la URL en el mensaje.
+
+    La excepción original de httpx incluye la URL completa, y esa URL lleva el
+    token del bot (`/bot<id>:<token>/sendMessage`). Propagarla hacía que el
+    token acabara en los logs al registrar la traza.
+    """
+
+
 class TelegramClient:
     """Cliente para enviar mensajes por Telegram Bot API"""
 
@@ -52,7 +61,9 @@ class TelegramClient:
                     e.response.status_code,
                     body,
                 )
-                raise
+                raise TelegramSendError(
+                    f"Telegram sendMessage falló ({e.response.status_code})"
+                ) from None
             return response.json()
 
     async def send_inline_keyboard(
