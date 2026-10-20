@@ -26,24 +26,24 @@ Estados: `PENDIENTE` · `EN CURSO` · `HECHO` · `DIFERIDO` · `DESCARTADO`
 | Railway · servicio cron | `reminders-cron` · `79a8984e-86df-4f2d-a82d-58e2edf067f9` | `alpine:latest`, `*/15 * * * *` |
 | Neon · proyecto | `hidden-flower-89025402` (nombre: **smartbooking**) | branch `production`, BD `neondb` |
 | Vercel · proyecto | `smartbookin-agent-ai` · `prj_dkWTfgeRvTm8pfEh7IEJ8TiSesGa` | plan Hobby, SPA Vite |
-| GitHub | `hrafael2011/smartbookin-agent-ai` | Railway y Vercel despliegan de aquí |
+| GitHub | `rafenixcore/smartbooking-ai` (antes `smartbookin-agent-ai`) | Railway y Vercel despliegan de aquí |
 
 ---
 
 ## Backlog
 
-### ⚠️ Bloqueante — pendiente de commit
+### Bloqueante — resuelto
 
 | # | Tarea | Estado | Notas |
 |---|-------|--------|-------|
-| 0 | **Commitear los cambios de `backend/`** | PENDIENTE | El deploy activo se subió con `railway deployment up` (código local), **NO desde git**. El próximo deploy que dispare GitHub desde `main` **reproduce el crash del 2026-10-04**. Ver esa entrada |
+| 0 | **Commitear los cambios de `backend/`** | HECHO | Commit `a85bb97` pusheado a `main`. GitHub disparó el deploy `c5cfee6f` → `SUCCESS`. Producción ya es reproducible desde git. Ver la entrada de cierre |
 
 ### Producción
 
 | # | Tarea | Estado | Notas |
 |---|-------|--------|-------|
 | 1 | `VITE_API_URL` en Vercel → URL real del backend | HECHO | Configurado por el usuario; verificado en el bundle y con CORS |
-| 2 | Cron externo para recordatorios 24h/2h | HECHO | Servicio `reminders-cron`, cada 15 min. Verificado end-to-end |
+| 2 | Cron externo para recordatorios 24h/2h | **DIFERIDO** | **Apagado a petición del usuario (2026-10-04)**: no tiene sentido enviar recordatorios hasta que el MVP esté terminado y en uso. El servicio `reminders-cron` queda montado y configurado; reactivar = volver a poner `cronSchedule` (`*/15 * * * *`) vía `serviceInstanceUpdate`. Dos cosas quedaron **sin resolver** para cuando se retome: (a) la cadencia no era fiable — el contenedor tardaba ~14 min en terminar y Railway salta ejecuciones; (b) el intervalo de 15 min lo elegí yo a partir de `main.py`, nunca se acordó con el usuario |
 | 3 | WhatsApp en producción | DIFERIDO | Decisión del usuario: lo verifica él después |
 | 4 | Serverless (App Sleeping) en Railway | HECHO | Ahorro ~$0.65/mes neto |
 | 5 | Parar el servicio si el MVP se pausa | PENDIENTE | Decisión del usuario. Ahorro real ~$0.22/mes |
@@ -81,6 +81,111 @@ Estados: `PENDIENTE` · `EN CURSO` · `HECHO` · `DIFERIDO` · `DESCARTADO`
 ## Registro de cambios
 
 <!-- Nuevas entradas arriba. Formato: fecha — título, luego qué/dónde/por qué/verificación -->
+
+### 2026-10-20 — Cuenta de demostración real en el login, y repo renombrado
+
+**Qué:** el aviso bajo el formulario mostraba credenciales de un *seed local*
+(`barberia.excelencia.demo@local.test`) que no existen en producción. Ahora muestra la
+cuenta de demostración real: `demo@rafenixcore.com` / `Demo2026-Rafenix`.
+**Dónde:** `frontend/src/pages/Login.tsx` (bloque «Demo Credentials»).
+**Por qué:** la demo pública se comparte con reclutadores; un aviso con credenciales que
+no funcionan resta credibilidad y confunde.
+**Datos de la demo (Railway · producción):** dueño `demo@rafenixcore.com` (id 5); negocio
+`Barbería Rafenix` (id 3); servicios «Corte de cabello», «Arreglo de barba» y
+«Corte + barba»; horarios L-S 09:00-18:00; un cliente y una cita confirmada de ejemplo.
+Creados con la API pública (`/auth/register`, `/businesses`, `/services`,
+`/schedule-rules?business_id=`, `/customers`, `/appointments`), sin tocar la base a mano.
+**Verificación:** login en el panel con Playwright → llega a `/dashboard` con el negocio y
+el checklist en 4/5 (la cita de ejemplo se creó después).
+**Repo:** renombrado `smartbookin-agent-ai` → **`smartbooking-ai`** (GitHub conserva
+redirección desde el nombre viejo).
+
+### 2026-10-19 — MCP oficial de Meta (WhatsApp Business Tools) añadido
+
+**Qué:** servidor MCP `meta-whatsapp` (`--transport http`, scope `user`) apuntando a
+`https://mcp.facebook.com/whatsapp_business_tools`.
+**Por qué:** el usuario lo pidió para configurar WhatsApp Business desde el agente.
+**Autenticación:** OAuth 2.0 Authorization Code + PKCE (S256) con Facebook Login for
+Business; registro dinámico de cliente; scopes `business_management`,
+`whatsapp_business_management`, `whatsapp_business_messaging`. Sin token estático.
+**Estado:** añadido a `~/.claude.json`; queda **pendiente la autenticación interactiva**
+del usuario vía `/mcp` (no se puede automatizar).
+**Nota:** el MCP no entrega el token de system user que el backend necesita
+(`META_WABA_TOKEN` + `META_APP_SECRET`); sirve para configurar la cuenta, no para el
+runtime. Meta lo describe como herramienta de setup/pruebas, no de envío en producción.
+
+
+### 2026-10-04 — Fix `pool_pre_ping` + estado real del cron (⚠️ cadencia no fiable)
+
+**Qué:** commit `4997193` → `app/core/database.py`. Deploy `d936540f` (`SUCCESS`).
+
+**Por qué:** el tick del cron de las 16:02 devolvió
+`wget: server returned error: HTTP/1.1 500 Internal Server Error`. Causa: el primer
+request tras un periodo de reposo falla porque el contenedor de Railway duerme y Neon
+suspende el compute, dejando handles muertos en el pool de SQLAlchemy. El reintento
+manual funcionaba, pero **el cron no reintenta**. Sin este fix, el cron falla
+precisamente cuando el sistema estuvo inactivo — que es su situación normal.
+
+**Fix:** `pool_pre_ping=True` en `create_async_engine`.
+
+**Verificación (prueba directa en frío):** a las 16:17:02, con el backend ~15 min sin
+recibir tráfico y Neon suspendido desde las 16:07, un `POST /api/auth/token` devolvió
+**401 en 3.68 s** (antes: 500). Los 3.68 s son el tiempo de despertar Neon.
+
+---
+
+**⚠️ Problema abierto — cadencia del cron.** Los logs con timestamp muestran:
+
+```
+15:45:14  EXIT=0                 ← ejecución correcta
+16:02:17  wget: 500              ← el bug de pool_pre_ping (ya corregido)
+16:16:54  Stopping Container     ← el contenedor de las 16:02 tardó ~14 min en terminar
+```
+
+La doc de Railway dice: *"if a previous execution is still running when the next
+scheduled execution is due, Railway will skip the new cron job"*. Eso explica que no
+hubiera ejecución a las 16:15, y que los ticks observados (15:45, 16:02) no sigan un
+patrón `*/15` limpio.
+
+La configuración **está bien** — confirmado por GraphQL:
+`cronSchedule = "*/15 * * * *"` con el start command correcto. El problema es el ciclo
+de vida del contenedor, no la configuración.
+
+**Hipótesis sin confirmar:** el `startCommand` pasado como `sh -c '...'` deja un shell
+como PID 1 que Railway no considera terminado. **Próximo intento sugerido:** quitar el
+wrapper `sh -c`, usar `wget -T 30 -t 1 -O /dev/null` (sin barra de progreso y con
+timeout acotado) y verificar si el contenedor termina de inmediato. Si Railway sigue
+sin terminar el contenedor, **migrar a GitHub Actions** (cron en el repo, sin ciclo de
+vida de contenedor).
+
+**Impacto:** los recordatorios se envían cuando el cron logra correr, pero no con la
+puntualidad de 15 min que el spec asume. No bloquea, pero no está terminado.
+
+
+### 2026-10-04 — Cierre de la tarea bloqueante #0: fixes commiteados y deploy desde git validado
+
+**Qué:** commit `a85bb97` en `main` con los fixes del incidente, más `docs/WORKLOG.md`,
+la norma de registro en `AGENTS.md` y la limpieza de `REDIS_URL` en `.env.example`.
+Autorizado explícitamente por el usuario para commitear y pushear a `main`.
+
+**Dónde:** `main` (`3ef430a..a85bb97`). Railway disparó el deploy `c5cfee6f`
+automáticamente desde GitHub — **la primera vez en el día que un deploy sale de git
+y no de `railway deployment up`**.
+
+**Por qué:** hasta este commit, el código corriendo en producción no existía en git.
+Cualquier deploy disparado por GitHub habría reconstruido la imagen sin los fixes y
+reproducido el crash.
+
+**Verificación (deploy `c5cfee6f`, commit `a85bb97` → `SUCCESS`):**
+- `GET /` → 200 · `GET /docs` → 200 · `GET /openapi.json` → 200
+- `POST /api/auth/token` → **401** ⇒ la BD responde
+- `POST /internal/jobs/reminders` sin token → **401** ⇒ protección intacta
+- Preflight CORS desde `https://smartbookin-agent-ai.vercel.app` → **200** con
+  `access-control-allow-origin` correcto ⇒ el panel puede hablar con el backend
+
+**Estado:** producción es reproducible desde `main`. La ventana de fragilidad
+abierta por el incidente queda cerrada.
+
 
 ### 2026-10-04 — Cron de recordatorios + higiene autorizada
 
