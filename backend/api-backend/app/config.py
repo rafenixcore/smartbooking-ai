@@ -60,6 +60,8 @@ class Config:
     TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
     TELEGRAM_API_BASE_URL = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}"
     TELEGRAM_BOT_USERNAME = os.getenv("TELEGRAM_BOT_USERNAME", "").lstrip("@")
+    # Opcional: si se define, el webhook exige que Telegram firme con este valor.
+    TELEGRAM_WEBHOOK_SECRET = os.getenv("TELEGRAM_WEBHOOK_SECRET")
 
     # Registro: si false (MVP), el registro activa la cuenta directamente
     # (reemplaza al antiguo AUTO_VERIFY_EMAIL, invertido)

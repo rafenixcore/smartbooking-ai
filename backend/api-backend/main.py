@@ -36,6 +36,7 @@ from app.services.whatsapp_renderer import render_bot_reply, strip_html
 from app.services.idempotency import should_process_channel_event
 from app.utils.channel_phone import normalize_channel_phone
 from app.core.scheduler import start_scheduler, shutdown_scheduler, scheduler
+from app.core.webhook_security import telegram_secret_is_valid
 
 logger = logging.getLogger(__name__)
 
@@ -171,12 +172,27 @@ async def verify_webhook(request: Request):
 @app.post("/webhooks/telegram")
 async def telegram_webhook(request: Request):
     """Webhook Telegram: un solo bot, tenant por vínculo usuario↔negocio."""
+    # Si TELEGRAM_WEBHOOK_SECRET está configurado, solo se acepta la cabecera
+    # que Telegram firma con ese valor. Sin la variable, el bot sigue igual.
+    if not telegram_secret_is_valid(
+        request.headers.get("X-Telegram-Bot-Api-Secret-Token"),
+        config.TELEGRAM_WEBHOOK_SECRET,
+    ):
+        logger.warning("Webhook Telegram rechazado: secret token inválido")
+        raise HTTPException(status_code=403, detail="Forbidden")
+
     try:
         payload = await request.json()
+    except Exception:
+        logger.warning("Webhook Telegram: payload no es JSON válido")
+        raise HTTPException(status_code=400, detail="Bad Request") from None
+
+    try:
         return await process_telegram_update(payload)
-    except Exception as e:
-        print(f"Error en webhook telegram: {e}")
-        return {"status": "error", "message": str(e)}
+    except Exception:
+        # El detalle se queda en el log: la respuesta al cliente es genérica.
+        logger.exception("Error en webhook Telegram")
+        return {"status": "error"}
 
 
 @app.post("/webhooks/whatsapp")

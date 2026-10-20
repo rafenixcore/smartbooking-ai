@@ -199,10 +199,11 @@ appoinment-ai/
 
 | Tipo | Framework | Comando |
 |------|-----------|---------|
-| Backend unit | pytest | `cd backend/api-backend && pytest tests/ -v` |
+| Backend | pytest | `cd backend/api-backend && pytest tests/ -q` |
+| Frontend | Vitest | `cd frontend && npm test` |
 | Frontend E2E | Playwright | `cd frontend && npm run test:e2e` |
 
-25+ tests backend cubriendo: **FSM**, **orquestador**, **handlers** (booking, cancel, modify), **NLU**, **seguridad** (tokens, webhooks, refresh), **rate limiting**, e **idempotencia**.
+**423 tests de backend** y **33 de frontend** en verde (medido el 2026-10-20). Cubren **FSM**, **orquestador**, **handlers** (booking, cancel, modify), **NLU**, **seguridad** (tokens, webhooks, refresh, secret token de Telegram), **rate limiting** e **idempotencia**.
 
 ---
 
@@ -213,7 +214,8 @@ appoinment-ai/
 - **Rate limiting** sliding-window en memoria (60 req/60s por IP)
 - **Idempotencia** de eventos de canales — evita citas duplicadas por retries
 - **Verificación de email** con token de 48 horas
-- **Webhook signatures** para WhatsApp (Meta) y Telegram
+- **Webhook signatures** para WhatsApp (Meta) y para Telegram vía `X-Telegram-Bot-Api-Secret-Token` — esta última se activa definiendo `TELEGRAM_WEBHOOK_SECRET` y registrando el mismo valor con `setWebhook`; sin la variable el webhook sigue aceptando peticiones sin firmar
+- **Errores de webhook sin detalle**: la respuesta al cliente es genérica y el error real queda en el log
 
 ---
 

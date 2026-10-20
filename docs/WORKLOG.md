@@ -82,6 +82,26 @@ Estados: `PENDIENTE` · `EN CURSO` · `HECHO` · `DIFERIDO` · `DESCARTADO`
 
 <!-- Nuevas entradas arriba. Formato: fecha — título, luego qué/dónde/por qué/verificación -->
 
+### 2026-10-20 — Secret token del webhook de Telegram y errores sin detalle
+
+**Qué:** el webhook `/webhooks/telegram` procesaba cualquier petición que llegara a la
+URL y, si algo fallaba, devolvía `{"status":"error","message":str(e)}` al cliente.
+Ahora comprueba `X-Telegram-Bot-Api-Secret-Token` y responde sin detalle.
+**Dónde:** `main.py` (`telegram_webhook`), `app/config.py` (`TELEGRAM_WEBHOOK_SECRET`),
+`app/core/webhook_security.py` (nuevo) y `tests/test_webhook_security.py` (nuevo).
+**Por qué:** sin firma, cualquiera que conozca la URL puede inyectar actualizaciones
+falsas y crear o cancelar citas en nombre de un usuario. Devolver `str(e)` filtraba
+detalles internos al cliente.
+**Compatibilidad:** la variable es opcional. Si no está definida, el webhook acepta como
+antes, así que el código puede desplegarse sin dejar el bot caído. Para activarla hay que
+definir `TELEGRAM_WEBHOOK_SECRET` en Railway y registrar el mismo valor con
+`setWebhook(secret_token=...)`. **Pendiente de configuración.**
+**También:** README corregido — decía «25+ tests backend» cuando hay 423, y afirmaba
+firma de webhook para Telegram que no existía.
+**Verificación:** `pytest tests -q` → 423 passed (9 nuevos). No se probó contra el bot real.
+
+### 2026-10-20 — Cuenta de demostración real en el login, y repo renombrado
+
 ### 2026-10-20 — Cuenta de demostración real en el login, y repo renombrado
 
 **Qué:** el aviso bajo el formulario mostraba credenciales de un *seed local*
