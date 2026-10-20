@@ -82,6 +82,33 @@ Estados: `PENDIENTE` · `EN CURSO` · `HECHO` · `DIFERIDO` · `DESCARTADO`
 
 <!-- Nuevas entradas arriba. Formato: fecha — título, luego qué/dónde/por qué/verificación -->
 
+### 2026-10-20 — Producción al día: token rotado, `93a967f` desplegado y webhook firmado
+
+**Qué:** cierra el pendiente de la entrada anterior. (1) Token del bot rotado en BotFather
+(el anterior aparecía en los logs y en la respuesta del webhook); (2) `TELEGRAM_BOT_TOKEN`
+actualizado en Railway; (3) creada `TELEGRAM_WEBHOOK_SECRET`; (4) desplegado `93a967f`,
+que envuelve los fallos de httpx en `TelegramSendError` para que la URL con el token no
+llegue al log; (5) webhook registrado con `secret_token`.
+**Dónde:** Railway · servicio `smartbooking-ai` · producción (variables `TELEGRAM_BOT_TOKEN`
+y `TELEGRAM_WEBHOOK_SECRET`); `app/services/telegram_client.py`; Telegram `setWebhook`.
+**Por qué:** sin token nuevo el bot no podía enviar nada; sin `secret_token` cualquiera con
+la URL podía inyectar actualizaciones falsas; y sin el saneado de excepciones el token
+seguía escribiéndose en los logs de Railway.
+**Verificación:** deploy `7b6bfc41` → `SUCCESS` (arranque, migraciones Alembic y uvicorn OK);
+hash SHA-256 del token en Railway == `.env` local (comparado sin imprimir valores);
+`getWebhookInfo` → URL correcta, `pending_update_count: 0`, sin último error; `POST` sin
+cabecera → **403**, secret incorrecto → **403**, secret correcto + cuerpo inválido → **400**
+(prueba de que la firma se valida y el payload se rechaza); logs del despliegue sin ninguna
+línea que contenga `api.telegram.org/bot`.
+**Nota operativa:** el primer intento (`e4e46c69`) falló en *railpack prepare* porque al
+subir solo `backend/api-backend` la ruta `/backend/api-backend` —el `rootDirectory` del
+servicio— no existía dentro del archivo. Se relanzó con la estructura completa. Este
+despliegue salió de una copia preparada, no de un push; el repo sigue enlazado, así que el
+próximo push a `main` volverá a desplegar por git.
+**Incidente externo:** entre las 17:03 y las ~20:40 UTC Railway pausó los builds de todos
+los workspaces («New builds are temporarily paused», `status.railway.com`); no fue una
+desconexión ni el cambio de nombre de usuario. El servicio ya desplegado no se vio afectado.
+
 ### 2026-10-20 — Secret token del webhook de Telegram y errores sin detalle
 
 **Qué:** el webhook `/webhooks/telegram` procesaba cualquier petición que llegara a la
