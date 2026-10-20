@@ -48,6 +48,19 @@
 
 ---
 
+## 📸 Capturas
+
+| | |
+|---|---|
+| ![Dashboard](docs/screenshots/smartbooking-dashboard.png) | ![Calendario](docs/screenshots/smartbooking-calendar.png) |
+| ![Citas](docs/screenshots/smartbooking-appointments.png) | ![Servicios](docs/screenshots/smartbooking-services.png) |
+
+![Login](docs/screenshots/smartbooking-login.png)
+
+> Tomadas del entorno de demostración (`demo@rafenixcore.com`) con datos de ejemplo; el teléfono del cliente de prueba aparece difuminado.
+
+---
+
 ## 🏗️ Arquitectura
 
 ```mermaid
