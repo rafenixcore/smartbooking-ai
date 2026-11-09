@@ -44,7 +44,7 @@ Estados: `PENDIENTE` · `EN CURSO` · `HECHO` · `DIFERIDO` · `DESCARTADO`
 |---|-------|--------|-------|
 | 1 | `VITE_API_URL` en Vercel → URL real del backend | HECHO | Configurado por el usuario; verificado en el bundle y con CORS |
 | 2 | Cron externo para recordatorios 24h/2h | **DIFERIDO** | **Apagado a petición del usuario (2026-10-04)**: no tiene sentido enviar recordatorios hasta que el MVP esté terminado y en uso. El servicio `reminders-cron` queda montado y configurado; reactivar = volver a poner `cronSchedule` (`*/15 * * * *`) vía `serviceInstanceUpdate`. Dos cosas quedaron **sin resolver** para cuando se retome: (a) la cadencia no era fiable — el contenedor tardaba ~14 min en terminar y Railway salta ejecuciones; (b) el intervalo de 15 min lo elegí yo a partir de `main.py`, nunca se acordó con el usuario |
-| 3 | WhatsApp en producción | DIFERIDO | Decisión del usuario: lo verifica él después |
+| 3 | WhatsApp en producción | **EN CURSO** (2026-11-08) | Negocio `SmartBooking` (id 4) creado y enlazado al número real. **Falta:** `META_APP_SECRET` y `META_WABA_TOKEN` en Railway, y confirmar callback/verify token en la app de Meta. Ver la entrada del 2026-11-08 |
 | 4 | Serverless (App Sleeping) en Railway | HECHO | Ahorro ~$0.65/mes neto |
 | 5 | Parar el servicio si el MVP se pausa | PENDIENTE | Decisión del usuario. Ahorro real ~$0.22/mes |
 | 6 | `AI_ENABLED=false` explícito en Railway | HECHO | Estaba off solo por default del código |
@@ -81,6 +81,26 @@ Estados: `PENDIENTE` · `EN CURSO` · `HECHO` · `DIFERIDO` · `DESCARTADO`
 ## Registro de cambios
 
 <!-- Nuevas entradas arriba. Formato: fecha — título, luego qué/dónde/por qué/verificación -->
+
+### 2026-11-08 — WhatsApp: diagnóstico real y negocio enlazado al número de Meta
+
+**Qué:** análisis verificado (código + Railway + Neon + MCP de Meta) del estado de WhatsApp, y
+alta del negocio que atenderá el número real. Se creó el owner `hendrickrafael@rafenixcore.com`
+(id 6) y el negocio **`SmartBooking`** (id 4) con `whatsapp_phone_number_id =
+1180291398493188` (+1 809-243-8778), vía API pública de producción (`/auth/register`,
+`/businesses/`), sin tocar la base a mano.
+**Dónde:** Neon `neondb` (tablas `owners` y `businesses`); sin cambios de código.
+**Por qué:** los 3 negocios existentes son de demo y ninguno tenía el número real, así que el
+webhook habría respondido «Business not found». El proyecto limita un negocio por dueño, por eso
+se creó una cuenta nueva en lugar de reutilizar `demo@rafenixcore.com`.
+**Verificación:** `SELECT` en Neon confirma owner 6 + negocio 4 con el `phone_number_id`; la
+creación por API devolvió `201`. Los tests de WhatsApp del backend pasan (50 passed).
+**Sigue pendiente para que funcione:** (a) `META_APP_SECRET` y `META_WABA_TOKEN` en Railway
+servicio `smartbooking-ai`; (b) confirmar en el App Dashboard que el callback es
+`https://smartbooking-ai-production.up.railway.app/webhooks/whatsapp` con el verify token de
+`META_VERIFY_TOKEN`; (c) prueba con un WhatsApp real y log `wa_route`.
+**Seguridad:** la cuenta del owner se creó con contraseña temporal entregada al usuario; conviene
+cambiarla desde el panel. No se registró ningún secreto en este worklog.
 
 ### 2026-10-20 — Producción al día: token rotado, `93a967f` desplegado y webhook firmado
 

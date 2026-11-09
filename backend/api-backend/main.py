@@ -146,11 +146,11 @@ app.include_router(dashboard.router, prefix="/api/dashboard", tags=["Dashboard"]
 app.include_router(internal_jobs.router)
 
 
-@app.get("/webhooks/whatsapp/verify")
-async def verify_webhook(request: Request):
-    """
-    Verificación de webhook de Meta (GET)
-    Meta envía: ?hub.mode=subscribe&hub.verify_token=...&hub.challenge=...
+def _meta_challenge_response(request: Request) -> Response:
+    """Handshake GET de Meta: ?hub.mode=subscribe&hub.verify_token=...&hub.challenge=...
+
+    Meta espera el challenge como string crudo (puede ser alfanumérico); devolver
+    int() o JSON rompería la verificación en algunos casos.
     """
     params = request.query_params
     mode = params.get("hub.mode")
@@ -162,11 +162,27 @@ async def verify_webhook(request: Request):
         and token == config.META_VERIFY_TOKEN
         and challenge is not None
     ):
-        # Meta espera el challenge como string crudo (puede ser alfanumérico);
-        # devolver int() o JSON rompería la verificación en algunos casos.
         return Response(content=str(challenge), media_type="text/plain")
 
     raise HTTPException(status_code=403, detail="Verification failed")
+
+
+@app.get("/webhooks/whatsapp")
+async def verify_webhook_callback(request: Request):
+    """Verificación en la callback URL configurada en Meta.
+
+    Meta hace el GET de verificación exactamente sobre la callback URL, no sobre
+    una subruta. Antes solo existía `/webhooks/whatsapp/verify`, así que la
+    verificación desde el App Dashboard fallaba con CALLBACK_VERIFICATION_FAILED.
+    Esta ruta convive con el POST del webhook en la misma URL.
+    """
+    return _meta_challenge_response(request)
+
+
+@app.get("/webhooks/whatsapp/verify")
+async def verify_webhook(request: Request):
+    """Alias histórico de la verificación (se mantiene por compatibilidad)."""
+    return _meta_challenge_response(request)
 
 
 @app.post("/webhooks/telegram")
