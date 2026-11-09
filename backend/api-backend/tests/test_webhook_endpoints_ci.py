@@ -88,6 +88,37 @@ async def test_whatsapp_verify_rejects_bad_token(monkeypatch):
     assert exc.value.status_code == 403
 
 
+async def test_whatsapp_verify_works_on_callback_url(monkeypatch):
+    """Meta verifica con GET sobre la callback URL exacta, no sobre una subruta."""
+    monkeypatch.setattr(main.config, "META_VERIFY_TOKEN", "verify_abc")
+    req = DummyRequest(
+        None,
+        query_params={
+            "hub.mode": "subscribe",
+            "hub.verify_token": "verify_abc",
+            "hub.challenge": "abc123",
+        },
+    )
+    resp = await main.verify_webhook_callback(req)
+    assert resp.body == b"abc123"
+    assert resp.media_type == "text/plain"
+
+
+async def test_whatsapp_callback_verify_rejects_bad_token(monkeypatch):
+    monkeypatch.setattr(main.config, "META_VERIFY_TOKEN", "verify_abc")
+    req = DummyRequest(
+        None,
+        query_params={
+            "hub.mode": "subscribe",
+            "hub.verify_token": "wrong",
+            "hub.challenge": "12345",
+        },
+    )
+    with pytest.raises(HTTPException) as exc:
+        await main.verify_webhook_callback(req)
+    assert exc.value.status_code == 403
+
+
 async def test_telegram_webhook_endpoint_ok(monkeypatch):
     async def fake_process(_payload):
         return {"status": "ok"}
