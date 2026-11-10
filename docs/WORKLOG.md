@@ -68,7 +68,7 @@ Estados: `PENDIENTE` · `EN CURSO` · `HECHO` · `DIFERIDO` · `DESCARTADO`
 | # | Tarea | Estado | Notas |
 |---|-------|--------|-------|
 | 15 | Recordatorios y configuración guiada de WhatsApp | **DIFERIDO** (2026-11-09) | Se conserva para una fase posterior: recordatorio único a 24 horas, alta/estado guiado del canal y explicación de tarifas al dueño. La contabilidad de mensajes necesaria para métricas de administración se planificó en #16. |
-| 16 | UI, acceso por invitación, recuperación y administración de plataforma | **EN CURSO** (2026-11-10) | Branch `007-platform-admin-access-ui` publicado; Neon production migrado a `c8e3d4f5a601` tras respaldo y restauración de prueba. Dueños 6 y negocios 4 conservados; 4 membresías creadas. Pendientes: desplegar backend y frontend, confirmar correo administrador para bootstrap y ejecutar recorridos reales T017/T033. Límites: recuperación y login `/admin`, 5/correo y 20/IP por hora. |
+| 16 | UI, acceso por invitación, recuperación y administración de plataforma | **EN CURSO** (2026-11-10) | Neon migrado a `c8e3d4f5a601` con respaldo restaurado de prueba. Backend Railway y frontend Vercel desplegados desde `main` (`8fc9ecf`); rutas directas, CORS y API verificados. Pendientes: confirmar correo administrador, bootstrap y recorridos reales de invitación/recuperación T017/T033. Límites: 5/correo y 20/IP por hora. |
 | 18 | Corregir hallazgos de seguridad y consistencia de T035 | **HECHO** (2026-11-09) | R1–R6 corregidos y probados localmente tras autorización explícita del usuario. Límite `/admin` confirmado: 5 fallos/correo y 20/IP por hora. Nuevas migraciones `b7c2f3e4d590` y `c8e3d4f5a601`; ver `specs/007-platform-admin-access-ui/security-review.md`. Producción no modificada. |
 
 **Recomendaciones diferidas para #15 (no son comportamiento actual):**
@@ -117,6 +117,18 @@ Estados: `PENDIENTE` · `EN CURSO` · `HECHO` · `DIFERIDO` · `DESCARTADO`
 ## Registro de cambios
 
 <!-- Nuevas entradas arriba. Formato: fecha — título, luego qué/dónde/por qué/verificación -->
+
+### 2026-11-10 — Aplicación 007 desplegada y rutas públicas corregidas
+
+**Qué:** se publicó `main` con la fase 007. Railway y Vercel desplegaron el commit `99ca254`; se cambió `FRONTEND_BASE_URL` al dominio público `https://smartbooking.rafenixcore.com` y se añadió ese origen a `ALLOWED_ORIGINS` en Railway. La primera comprobación de navegación directa mostró 404 para `/admin`, `/invitation` y `/reset-password`; se añadió `frontend/vercel.json` con rewrite de SPA y se publicó el commit `8fc9ecf`.
+
+**Dónde:** Git `main` y branch `007-platform-admin-access-ui`; Railway servicio backend `production`, Vercel proyecto `smartbookin-agent-ai` y `frontend/vercel.json`.
+
+**Por qué:** habilitar los flujos reales desde correo, con URLs públicas accesibles y comunicación navegador–API. Las rutas de Vite necesitan el rewrite para abrirse directamente desde un enlace.
+
+**Verificación:** Railway deployment `143bd235-2c7d-4fea-a376-ed412c2fab36` terminó `SUCCESS` en `8fc9ecf`; Vercel deployment `dpl_B2ofmopzWWGP31JtTeGLX7tZ91hn` terminó `READY` en el mismo commit y sirve el dominio público. `/admin`, `/invitation`, `/reset-password`, salud API y OpenAPI respondieron 200. El preflight CORS desde el dominio público respondió 200 con `access-control-allow-origin` correcto. Playwright abrió `/admin` y redirigió a `/admin/login`; `/register` redirigió a `/login`. El bootstrap y los correos iniciados desde la app siguen pendientes.
+
+---
 
 ### 2026-11-10 — Migración 007 aplicada en Neon production
 

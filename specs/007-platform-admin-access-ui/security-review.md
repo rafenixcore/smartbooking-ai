@@ -47,3 +47,5 @@ Las pantallas de invitación y recuperación muestran la marca Turno, los campos
 ## Estado operativo — 2026-11-10
 
 Neon production se migró a `c8e3d4f5a601` tras crear y restaurar de prueba un respaldo con PostgreSQL 18. Se conservaron 6 dueños y 4 negocios; hay 4 membresías `owner` y ningún negocio huérfano. La aplicación y el primer administrador aún no están desplegados/creados; falta la verificación funcional del recorrido real. El registro de la operación está en `docs/WORKLOG.md`.
+
+Railway y Vercel desplegaron posteriormente la aplicación en `main` (`8fc9ecf`). La navegación pública y CORS se comprobaron; el primer administrador sigue pendiente de creación y los flujos autenticados aún no se han recorrido.

@@ -26,9 +26,9 @@ bootstrap del primer administrador y los recorridos de acceso siguen pendientes.
   T012–T013. T016 añadió recuperación de contraseña para dueño y plataforma;
   T017 completó sus pantallas y plantillas; Resend entregó un correo directo de
   prueba, pero aún falta probar los recorridos que generan el correo desde la app.
-  T019–T026 añadieron gestión, bitácora y métricas de `/admin`. El panel está
-  implementado localmente, pero no desplegado. No invites usuarios hasta configurar
-  secretos y probar entrega en un entorno aprobado.
+  T019–T026 añadieron gestión, bitácora y métricas de `/admin`. El panel se
+  desplegó el 2026-11-10; aún falta crear el administrador inicial y probar
+  invitación y recuperación desde la aplicación antes de invitar usuarios reales.
 
 ## Correo de invitación
 
@@ -198,7 +198,7 @@ downgrade protegido no aplica.
 - El dominio de Resend está verificado; la clave restringida al dominio y el
   remitente están configurados en Railway `production`. No se cambió DNS. No se
   inspeccionó la zona Cloudflare porque no hay un MCP de Cloudflare habilitado.
-- `/admin` y sus rutas siguen pendientes de despliegue y verificación en
-  producción. Las migraciones sí están aplicadas en Neon.
+- `/admin` y sus rutas están desplegados; la navegación directa y CORS se
+  verificaron. Falta el recorrido autenticado, la invitación y la recuperación.
 - Después de crear datos de plataforma, la migración no puede revertirse con
   downgrade sin perderlos; usar un plan de conservación y recuperación.
