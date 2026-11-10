@@ -48,4 +48,8 @@ Las pantallas de invitación y recuperación muestran la marca Turno, los campos
 
 Neon production se migró a `c8e3d4f5a601` tras crear y restaurar de prueba un respaldo con PostgreSQL 18. Se conservaron 6 dueños y 4 negocios; hay 4 membresías `owner` y ningún negocio huérfano. La aplicación y el primer administrador aún no están desplegados/creados; falta la verificación funcional del recorrido real. El registro de la operación está en `docs/WORKLOG.md`.
 
-Railway y Vercel desplegaron posteriormente la aplicación en `main` (`8fc9ecf`). La navegación pública y CORS se comprobaron; el primer administrador sigue pendiente de creación y los flujos autenticados aún no se han recorrido.
+Railway y Vercel desplegaron posteriormente la aplicación en `main` (`8fc9ecf`). La navegación pública y CORS se comprobaron; en ese momento aún faltaban la creación del primer administrador y los flujos autenticados.
+
+La primera cuenta administradora se creó después con una contraseña aleatoria no divulgada. La recuperación se solicitó desde la API productiva y Resend informó `delivered`; queda pendiente que el usuario consuma el enlace y compruebe el acceso autenticado.
+
+Neon confirmó posteriormente que el enlace fue consumido y que existe una sesión administrativa vigente; el usuario confirmó que entró a `/admin`. Los cuatro negocios actuales son de prueba, por lo que las métricas globales no representan actividad comercial. Dos negocios tienen Phone Number ID de WhatsApp configurado; cualquier limpieza de datos debe preservar o reconfigurar esas conexiones. La invitación de un dueño nuevo sigue sin recorrido productivo.

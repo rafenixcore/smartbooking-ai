@@ -1,9 +1,10 @@
 # Operación del acceso de plataforma
 
 Este documento describe cómo preparar el esquema y habilitar el primer
-administrador de SmartBooking. Es un runbook para las tareas T002–T020; el
-procedimiento de migración se ejecutó en Neon production el 2026-11-10; el
-bootstrap del primer administrador y los recorridos de acceso siguen pendientes.
+administrador de SmartBooking. Es un runbook para las tareas T002–T020. La
+migración y el bootstrap se ejecutaron en Neon production el 2026-11-10. La
+configuración de la contraseña y el acceso a `/admin` se completaron; la
+invitación de un dueño nuevo sigue pendiente de prueba productiva.
 
 ## Estado de implementación
 
@@ -25,10 +26,12 @@ bootstrap del primer administrador y los recorridos de acceso siguen pendientes.
   horas. T011 conecta el envío por Resend; el frontend de invitación/alta está en
   T012–T013. T016 añadió recuperación de contraseña para dueño y plataforma;
   T017 completó sus pantallas y plantillas; Resend entregó un correo directo de
-  prueba, pero aún falta probar los recorridos que generan el correo desde la app.
+  prueba y una recuperación generada desde la app. La invitación sigue pendiente.
   T019–T026 añadieron gestión, bitácora y métricas de `/admin`. El panel se
-  desplegó el 2026-11-10; aún falta crear el administrador inicial y probar
-  invitación y recuperación desde la aplicación antes de invitar usuarios reales.
+  desplegó el 2026-11-10. Se creó la única cuenta inicial de administrador con
+  contraseña aleatoria no divulgada; la recuperación solicitada desde la app
+  fue entregada por Resend, consumida y permitió entrar a `/admin`. Falta
+  probar invitación desde el panel antes de invitar usuarios reales.
 
 ## Correo de invitación
 
@@ -63,9 +66,10 @@ y 20 por IP cada hora; los contadores HMAC se guardan en PostgreSQL. El cambio d
 contraseña consume el enlace y revoca sesiones de dueño o plataforma. El correo
 usa Resend y un enlace con fragmento `/reset-password#token=...`; T017 añadió
 las pantallas y plantillas. La clave de envío y el remitente están configurados
-en Railway `production`. La entrega directa de prueba desde Resend fue confirmada,
-pero falta probar una solicitud iniciada desde la aplicación y recorrer el enlace
-de recuperación, incluido uno vencido.
+en Railway `production`. La entrega directa de prueba desde Resend fue confirmada.
+La solicitud iniciada desde la aplicación se entregó el 2026-11-10 y su enlace
+fue consumido; el usuario confirmó que entró a `/admin`. El vencimiento y uso
+único están cubiertos por pruebas locales, no se probaron manualmente en producción.
 
 ## Suspensión de negocios y bitácora
 

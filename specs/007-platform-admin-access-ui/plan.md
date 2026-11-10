@@ -3,7 +3,7 @@
 **Rama**: `007-platform-admin-access-ui`
 **Fecha**: 2026-11-09
 **Especificación**: [spec.md](spec.md)
-**Estado**: T001–T016, T018–T032, T034 y T035 completadas. Los hallazgos R1–R6 de T035 se corrigieron localmente. T017/T033 siguen pendientes de recorridos funcionales desde la aplicación antes del despliegue.
+**Estado**: T001–T032, T034 y T035 completadas. Los hallazgos R1–R6 de T035 se corrigieron localmente. La aplicación está desplegada; el usuario completó la recuperación y entró a `/admin`. T033 sigue pendiente del recorrido de invitación/alta y revisión de métricas.
 
 ## Resumen
 
@@ -80,4 +80,4 @@ frontend/
 - Ver [research.md](research.md) para decisiones y brechas comprobadas.
 - Ver [quickstart.md](quickstart.md) para los recorridos de aceptación.
 
-**Estado de producción**: Turno está integrado, Resend confirmó `rafenixcore.com` y una prueba directa fue entregada. R1–R6 se probaron en PostgreSQL local. Neon se migró a `c8e3d4f5a601` el 2026-11-10 tras respaldo restaurado de prueba. Railway y Vercel desplegaron la aplicación; navegación directa y CORS funcionan. Faltan crear el administrador inicial, recorrer invitación/recuperación desde la aplicación y verificar permisos/métricas con sesión real. Mostrar «gasto real» solo después de conciliar con la facturación de Meta.
+**Estado de producción**: Turno está integrado y Resend confirmó `rafenixcore.com`. R1–R6 se probaron en PostgreSQL local. Neon se migró a `c8e3d4f5a601` el 2026-11-10 tras respaldo restaurado. Railway y Vercel desplegaron la aplicación; navegación directa y CORS funcionan. Se creó la primera cuenta administradora y la recuperación generada por la aplicación llegó a estado `delivered`. Faltan consumir el enlace, recorrer invitación y verificar permisos/métricas con sesión real. Mostrar «gasto real» solo después de conciliar con la facturación de Meta.

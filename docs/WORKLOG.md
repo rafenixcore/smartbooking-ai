@@ -62,13 +62,14 @@ Estados: `PENDIENTE` · `EN CURSO` · `HECHO` · `DIFERIDO` · `DESCARTADO`
 | 13 | Actualizar docs que describen infra inexistente | PENDIENTE | `MVP_STACK_ANALYSIS.md`, `README.md`, `PROYECTO_STATUS.md` |
 | 14 | Pinear dependencias del backend | HECHO | Topes de versión mayor añadidos a `requirements.txt` |
 | 17 | Configurar en Codex los MCP globales de Claude Code | **EN CURSO** (2026-11-09) | Definiciones agregadas y TOML validado: AWS, GitHub, Railway, Vercel, Neon, Resend, Sentry, Meta WhatsApp y Cloudflare. Último `codex mcp list`: OAuth pendiente/estado desconocido en los seis servidores HTTP; AWS no tiene credenciales locales utilizables y Railway login espera completar el navegador. Configuración local en `~/.codex/config.toml`; respaldo pre-reparación en `~/.codex/config.toml.pre-mcp-repair.bak`. |
+| 19 | Resolver datos de prueba presentes en producción | **PENDIENTE** (2026-11-10) | El usuario confirmó que los 4 negocios actuales son de prueba. Suman 10 citas, 6 clientes y 158 eventos de canal procesados; los negocios 2 y 4 tienen Phone Number ID de WhatsApp. Son datos que alimentan métricas reales del panel. Decidir conservación, limpieza o aislamiento antes de eliminarlos; no se modificó ninguno. |
 
 ### Alcance priorizado — UI, acceso y administración
 
 | # | Tarea | Estado | Notas |
 |---|-------|--------|-------|
 | 15 | Recordatorios y configuración guiada de WhatsApp | **DIFERIDO** (2026-11-09) | Se conserva para una fase posterior: recordatorio único a 24 horas, alta/estado guiado del canal y explicación de tarifas al dueño. La contabilidad de mensajes necesaria para métricas de administración se planificó en #16. |
-| 16 | UI, acceso por invitación, recuperación y administración de plataforma | **EN CURSO** (2026-11-10) | Neon migrado a `c8e3d4f5a601` con respaldo restaurado de prueba. Backend Railway y frontend Vercel desplegados desde `main` (`8fc9ecf`); rutas directas, CORS y API verificados. Pendientes: confirmar correo administrador, bootstrap y recorridos reales de invitación/recuperación T017/T033. Límites: 5/correo y 20/IP por hora. |
+| 16 | UI, acceso por invitación, recuperación y administración de plataforma | **EN CURSO** (2026-11-10) | Neon migrado a `c8e3d4f5a601` con respaldo restaurado. Railway/Vercel desplegados; rutas, CORS y API verificados. Primera cuenta administradora creada, recuperación entregada y consumida; usuario confirmó acceso al panel y Neon registra una sesión activa. T017 cerrada con prueba local de expiración; T033 aún requiere recorrido de invitación/alta y métricas con datos de prueba identificados. |
 | 18 | Corregir hallazgos de seguridad y consistencia de T035 | **HECHO** (2026-11-09) | R1–R6 corregidos y probados localmente tras autorización explícita del usuario. Límite `/admin` confirmado: 5 fallos/correo y 20/IP por hora. Nuevas migraciones `b7c2f3e4d590` y `c8e3d4f5a601`; ver `specs/007-platform-admin-access-ui/security-review.md`. Producción no modificada. |
 
 **Recomendaciones diferidas para #15 (no son comportamiento actual):**
@@ -117,6 +118,30 @@ Estados: `PENDIENTE` · `EN CURSO` · `HECHO` · `DIFERIDO` · `DESCARTADO`
 ## Registro de cambios
 
 <!-- Nuevas entradas arriba. Formato: fecha — título, luego qué/dónde/por qué/verificación -->
+
+### 2026-11-10 — Acceso administrativo verificado e inventario de datos de prueba
+
+**Qué:** el usuario confirmó que inició sesión en `/admin` con la contraseña establecida por recuperación y que los cuatro negocios existentes son de prueba. Se inventariaron los datos asociados antes de cualquier limpieza: 10 citas, 6 clientes, 158 eventos de canal procesados y Phone Number ID de WhatsApp en dos negocios. No se alteraron cuentas, negocios ni datos.
+
+**Dónde:** consultas de solo lectura a Neon `platform_admin_sessions`, `password_resets`, `businesses`, `business_memberships` y tablas con `business_id`; backlog #16/#19 y T017/T033. Los correos de usuarios no se guardaron en el worklog.
+
+**Por qué:** comprobar que el acceso inicial funciona y evitar que las métricas de la plataforma se interpreten como actividad comercial real cuando todavía reflejan pruebas.
+
+**Verificación:** Neon muestra 1 recuperación de administrador usada y 1 sesión administrativa vigente; el usuario confirmó el acceso. Hay exactamente un propietario activo por cada uno de los 4 negocios. Las pruebas locales de recuperación cubrieron expiración y uso único. Se inspeccionaron visualmente los accesos de dueño y administrador en escritorio y móvil. La invitación de un nuevo dueño no se ha probado en producción porque aún no se ha indicado un correo nuevo de prueba.
+
+---
+
+### 2026-11-10 — Primer administrador creado y recuperación enviada desde la app
+
+**Qué:** se creó de forma controlada la única cuenta inicial de plataforma con el correo confirmado por el usuario. La contraseña inicial fue aleatoria, no se mostró ni almacenó en archivos o logs; el usuario definirá la suya mediante el enlace de recuperación. Se solicitó el correo a través de `POST /api/auth/password-reset/request` en producción.
+
+**Dónde:** Neon `platform_admins` y `password_resets`; backend Railway y Resend. El correo concreto y el enlace no se registran en este archivo.
+
+**Por qué:** habilitar al dueño de la aplicación para entrar a `/admin` sin intercambiar contraseñas por el chat.
+
+**Verificación:** bootstrap devolvió `created`; Neon tiene 1 administrador y 1 recuperación de administrador sin usar. La API respondió HTTP 200 y Resend informó `delivered` para el mensaje «Restablece tu contraseña de SmartBooking» generado desde la aplicación. La pantalla pública `/admin/login` se inspeccionó visualmente en producción. Falta que el usuario consuma el enlace y valide el acceso.
+
+---
 
 ### 2026-11-10 — Aplicación 007 desplegada y rutas públicas corregidas
 
