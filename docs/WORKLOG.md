@@ -68,7 +68,7 @@ Estados: `PENDIENTE` · `EN CURSO` · `HECHO` · `DIFERIDO` · `DESCARTADO`
 | # | Tarea | Estado | Notas |
 |---|-------|--------|-------|
 | 15 | Recordatorios y configuración guiada de WhatsApp | **DIFERIDO** (2026-11-09) | Se conserva para una fase posterior: recordatorio único a 24 horas, alta/estado guiado del canal y explicación de tarifas al dueño. La contabilidad de mensajes necesaria para métricas de administración se planificó en #16. |
-| 16 | UI, acceso por invitación, recuperación y administración de plataforma | **EN CURSO** (2026-11-09) | Preflight local completo y branch `007-platform-admin-access-ui` pusheado (`8ab8d03`). T017/T033 requieren recorrido real desde la app. Pendientes: acceso autorizado a Vercel, aplicar migración Neon (esperar cambio a Sol y disponer de acceso seguro a Neon), desplegar y probar alta/admin. Límites confirmados: recuperación y login `/admin`, 5/correo y 20/IP por hora. |
+| 16 | UI, acceso por invitación, recuperación y administración de plataforma | **EN CURSO** (2026-11-10) | Branch `007-platform-admin-access-ui` publicado; Neon production migrado a `c8e3d4f5a601` tras respaldo y restauración de prueba. Dueños 6 y negocios 4 conservados; 4 membresías creadas. Pendientes: desplegar backend y frontend, confirmar correo administrador para bootstrap y ejecutar recorridos reales T017/T033. Límites: recuperación y login `/admin`, 5/correo y 20/IP por hora. |
 | 18 | Corregir hallazgos de seguridad y consistencia de T035 | **HECHO** (2026-11-09) | R1–R6 corregidos y probados localmente tras autorización explícita del usuario. Límite `/admin` confirmado: 5 fallos/correo y 20/IP por hora. Nuevas migraciones `b7c2f3e4d590` y `c8e3d4f5a601`; ver `specs/007-platform-admin-access-ui/security-review.md`. Producción no modificada. |
 
 **Recomendaciones diferidas para #15 (no son comportamiento actual):**
@@ -117,6 +117,18 @@ Estados: `PENDIENTE` · `EN CURSO` · `HECHO` · `DIFERIDO` · `DESCARTADO`
 ## Registro de cambios
 
 <!-- Nuevas entradas arriba. Formato: fecha — título, luego qué/dónde/por qué/verificación -->
+
+### 2026-11-10 — Migración 007 aplicada en Neon production
+
+**Qué:** se aplicaron `7c9d2e4f6a10`, `a6e1c9b4d270`, `b7c2f3e4d590` y `c8e3d4f5a601` a Neon `neondb`. Antes se creó un respaldo privado con `pg_dump` 18; se restauró íntegramente en PostgreSQL 18 desechable. El archivo temporal de recuperación quedó en `/tmp/smartbooking-neon-pre007-20261110/neondb.dump` (modo 600, SHA-256 `c354f1620e3ea45dfda90a38ef0e665a56cedcd9702bc740e0bb7ebd1884758d`). No contiene secretos de conexión, pero sí datos de producción: mantener privado y eliminar tras cerrar la ventana de recuperación.
+
+**Dónde:** Neon proyecto `smartbooking`, branch `production`, BD `neondb`; respaldo local temporal fuera del repositorio. Railway solo proporcionó la conexión existente mediante `railway run`; todavía no se desplegó código nuevo.
+
+**Por qué:** habilitar el esquema para acceso por invitación, recuperación y `/admin` conservando las cuentas actuales.
+
+**Verificación:** antes: revisión `f5b6ae5f0595`, 6 dueños, 4 negocios. El respaldo restaurado mostró los mismos conteos y revisión. Después: `c8e3d4f5a601`, 6 dueños, 4 negocios, 4 membresías `owner`, 0 negocios huérfanos y 0 administradores. Migración y consultas terminaron sin errores.
+
+---
 
 ### 2026-11-09 — Branch publicado; migración de producción pendiente
 

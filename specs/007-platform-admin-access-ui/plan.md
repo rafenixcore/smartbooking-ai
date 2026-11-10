@@ -80,4 +80,4 @@ frontend/
 - Ver [research.md](research.md) para decisiones y brechas comprobadas.
 - Ver [quickstart.md](quickstart.md) para los recorridos de aceptación.
 
-**Puertas antes de producción**: Turno ya fue aprobado e integrado, Resend confirmó `rafenixcore.com`, Railway tiene remitente y clave restringida al dominio, y una prueba directa fue entregada. R1–R6 y las migraciones se probaron en PostgreSQL local. Faltan el recorrido manual, migrar Neon y verificar permisos/métricas en el entorno desplegado. Mostrar «gasto real» solo después de conciliar con la facturación de Meta.
+**Puertas antes de producción**: Turno ya fue aprobado e integrado, Resend confirmó `rafenixcore.com`, Railway tiene remitente y clave restringida al dominio, y una prueba directa fue entregada. R1–R6 se probaron en PostgreSQL local. Neon se migró a `c8e3d4f5a601` el 2026-11-10 tras respaldo restaurado de prueba. Faltan desplegar la aplicación, recorrer los flujos reales y verificar permisos/métricas. Mostrar «gasto real» solo después de conciliar con la facturación de Meta.

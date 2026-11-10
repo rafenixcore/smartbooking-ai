@@ -2,13 +2,16 @@
 
 Este documento describe cómo preparar el esquema y habilitar el primer
 administrador de SmartBooking. Es un runbook para las tareas T002–T020; el
-procedimiento documentado aquí no se ha ejecutado en producción.
+procedimiento de migración se ejecutó en Neon production el 2026-11-10; el
+bootstrap del primer administrador y los recorridos de acceso siguen pendientes.
 
 ## Estado de implementación
 
 - Las migraciones `7c9d2e4f6a10`, `a6e1c9b4d270`, `b7c2f3e4d590` y `c8e3d4f5a601`, y sus modelos ORM, existen en el repositorio.
-- La migración se verificó en una base PostgreSQL local desechable. No se ha
-  aplicado a Neon ni a producción.
+- La migración se verificó en PostgreSQL local desechable y se aplicó a Neon
+  production el 2026-11-10. La revisión es `c8e3d4f5a601`; se conservaron 6
+  dueños y 4 negocios y se crearon 4 membresías `owner`. El respaldo previo se
+  restauró correctamente en PostgreSQL 18 desechable; ver `docs/WORKLOG.md`.
 - El backend ya implementa `POST /api/platform/auth/token`, renovación, cierre
   de sesión y `GET /api/platform/auth/me` (T006). Los JWT de plataforma duran
   15 minutos y el refresh de sesión, 7 días, sujeto a revocación.
@@ -195,7 +198,7 @@ downgrade protegido no aplica.
 - El dominio de Resend está verificado; la clave restringida al dominio y el
   remitente están configurados en Railway `production`. No se cambió DNS. No se
   inspeccionó la zona Cloudflare porque no hay un MCP de Cloudflare habilitado.
-- `/admin`, las rutas y las migraciones están implementadas en el repositorio,
-  pero no se desplegaron ni verificaron en producción.
+- `/admin` y sus rutas siguen pendientes de despliegue y verificación en
+  producción. Las migraciones sí están aplicadas en Neon.
 - Después de crear datos de plataforma, la migración no puede revertirse con
   downgrade sin perderlos; usar un plan de conservación y recuperación.

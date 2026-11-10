@@ -43,3 +43,7 @@ El usuario autorizó una base PostgreSQL local desechable y pruebas enfocadas. C
 Las pantallas de invitación y recuperación muestran la marca Turno, los campos de contraseña ofrecen un control accesible para mostrar/ocultar el valor, y el resultado de recuperación ofrece también el acceso de administración. Estas correcciones no cambian datos ni permisos de servidor.
 
 **Estado para despliegue:** pendiente. R1–R6 se corrigieron localmente y correo de producción está configurado. Aún falta completar el recorrido de `quickstart.md` y verificar migraciones, permisos y métricas en un entorno de prueba antes de solicitar autorización para publicar.
+
+## Estado operativo — 2026-11-10
+
+Neon production se migró a `c8e3d4f5a601` tras crear y restaurar de prueba un respaldo con PostgreSQL 18. Se conservaron 6 dueños y 4 negocios; hay 4 membresías `owner` y ningún negocio huérfano. La aplicación y el primer administrador aún no están desplegados/creados; falta la verificación funcional del recorrido real. El registro de la operación está en `docs/WORKLOG.md`.
