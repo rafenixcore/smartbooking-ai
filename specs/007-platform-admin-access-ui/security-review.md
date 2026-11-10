@@ -32,7 +32,7 @@ El usuario autorizó una base PostgreSQL local desechable y pruebas enfocadas. C
 
 ## Límites operativos verificados
 
-- Resend presenta `rafenixcore.com` verificado y con envío activo. El 2026-11-10 se configuraron en Railway `RESEND_API_KEY` (solo envío, restringida al dominio) y `RESEND_FROM_EMAIL`; el remitente de plataforma se probó con estado `delivered`. T034 queda verificada; T017/T033 aún necesitan recorrido real desde la aplicación. Cloudflare MCP no está disponible, y no se cambió DNS porque Resend ya verificaba el dominio.
+- Resend presenta `rafenixcore.com` verificado y con envío activo. El 2026-11-09 se configuraron en Railway `RESEND_API_KEY` (solo envío, restringida al dominio) y `RESEND_FROM_EMAIL`; el remitente de plataforma se probó con estado `delivered`. T034 queda verificada; T017/T033 aún necesitan recorrido real desde la aplicación. Cloudflare MCP no está disponible, y no se cambió DNS porque Resend ya verificaba el dominio.
 - No hay llamadas de producción a `estimate_message_cost` ni a `record_reconciled_period_total`; solo aparecen en el servicio y pruebas. Sin tarifas versionadas ni conciliación, la UI debe mantener el costo como no disponible. No hay base para mostrar gasto real.
 - La migración se probó previamente en PostgreSQL local desechable según T002/T016. Después de R4/R6 se probó upgrade/downgrade hasta la nueva cabeza `c8e3d4f5a601` en una base local aparte; no se comprobó Neon.
 - El perfil frontend había pasado lint y build en T033. En T035 el build y ESLint de las pantallas ajustadas aprobaron; no se hizo recorrido visual con navegador.

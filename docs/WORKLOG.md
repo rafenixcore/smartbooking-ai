@@ -68,7 +68,7 @@ Estados: `PENDIENTE` · `EN CURSO` · `HECHO` · `DIFERIDO` · `DESCARTADO`
 | # | Tarea | Estado | Notas |
 |---|-------|--------|-------|
 | 15 | Recordatorios y configuración guiada de WhatsApp | **DIFERIDO** (2026-11-09) | Se conserva para una fase posterior: recordatorio único a 24 horas, alta/estado guiado del canal y explicación de tarifas al dueño. La contabilidad de mensajes necesaria para métricas de administración se planificó en #16. |
-| 16 | UI, acceso por invitación, recuperación y administración de plataforma | **EN CURSO** (2026-11-10) | Preparación final local en curso. T017/T033 requieren recorrido de invitación/recuperación desde la app. Correo productivo configurado y prueba directa entregada. Pendientes antes de producción: commit/push, migración Neon (esperar cambio a Sol), deploy frontend y prueba del alta/admin. Límites confirmados: recuperación y login `/admin`, 5/correo y 20/IP por hora. |
+| 16 | UI, acceso por invitación, recuperación y administración de plataforma | **EN CURSO** (2026-11-09) | Preflight local completo y branch `007-platform-admin-access-ui` pusheado (`8ab8d03`). T017/T033 requieren recorrido real desde la app. Pendientes: acceso autorizado a Vercel, aplicar migración Neon (esperar cambio a Sol y disponer de acceso seguro a Neon), desplegar y probar alta/admin. Límites confirmados: recuperación y login `/admin`, 5/correo y 20/IP por hora. |
 | 18 | Corregir hallazgos de seguridad y consistencia de T035 | **HECHO** (2026-11-09) | R1–R6 corregidos y probados localmente tras autorización explícita del usuario. Límite `/admin` confirmado: 5 fallos/correo y 20/IP por hora. Nuevas migraciones `b7c2f3e4d590` y `c8e3d4f5a601`; ver `specs/007-platform-admin-access-ui/security-review.md`. Producción no modificada. |
 
 **Recomendaciones diferidas para #15 (no son comportamiento actual):**
@@ -118,7 +118,19 @@ Estados: `PENDIENTE` · `EN CURSO` · `HECHO` · `DIFERIDO` · `DESCARTADO`
 
 <!-- Nuevas entradas arriba. Formato: fecha — título, luego qué/dónde/por qué/verificación -->
 
-### 2026-11-10 — Preflight local antes de migrar Neon
+### 2026-11-09 — Branch publicado; migración de producción pendiente
+
+**Qué:** se publicó el branch `007-platform-admin-access-ui` con el commit `8ab8d03`; la aplicación no se desplegó y la base Neon no se modificó. El preflight local pasó: frontend lint/build, Vitest 47/47, Playwright 4/4 y backend 440 aprobadas/79 omitidas por requerir `TEST_DATABASE_URL`. Se identificó que el MCP de Neon no está disponible y que la configuración local apunta a una base no productiva. El acceso al equipo Vercel aún requiere autorización.
+
+**Dónde:** Git `origin/007-platform-admin-access-ui`; actualización de estado en este backlog. Servicios Railway/Vercel/Neon sin cambios en este paso.
+
+**Por qué:** dejar el trabajo versionado y verificado, sin tocar producción antes de aplicar el esquema de base de datos de forma segura y con el usuario en Sol, como solicitó.
+
+**Verificación:** `git push` terminó correctamente; pruebas y `git diff --check` aprobados. No se creó PR porque GitHub MCP/CLI no tiene permiso de escritura disponible. Próximo bloqueo operativo: acceso Neon seguro y autorización de equipo Vercel; no ejecutar `alembic upgrade` en producción antes de que el usuario cambie a Sol.
+
+---
+
+### 2026-11-09 — Preflight local antes de migrar Neon
 
 **Qué:** se actualizó la lista de requisitos con decisiones ya acordadas, se repararon expectativas de tests obsoletas para el acceso por invitación y onboarding, y se redactaron correos/datos de acceso de demo en el histórico del worklog antes de publicarlo.
 
@@ -130,7 +142,7 @@ Estados: `PENDIENTE` · `EN CURSO` · `HECHO` · `DIFERIDO` · `DESCARTADO`
 
 ---
 
-### 2026-11-10 — Configuración de correo transaccional en Railway
+### 2026-11-09 — Configuración de correo transaccional en Railway
 
 **Qué:** se creó en Resend una clave con permiso `sending_access` restringida a `rafenixcore.com`, se configuró en Railway junto con el remitente `SmartBooking <[correo omitido]>` y se envió un correo de prueba al destinatario indicado por el usuario. El secreto no se guardó en el repositorio ni en este worklog.
 
@@ -144,7 +156,7 @@ Estados: `PENDIENTE` · `EN CURSO` · `HECHO` · `DIFERIDO` · `DESCARTADO`
 
 ### 2026-11-09 — T017/T033/T034: verificación de preparación de correo
 
-**Qué:** revisión inicial de solo lectura: Resend presenta `rafenixcore.com` verificado y habilitado; Railway `production` aún no tenía `RESEND_API_KEY` ni `RESEND_FROM_EMAIL`. La configuración y prueba posterior se registran en la entrada del 2026-11-10. No hay herramienta MCP de Cloudflare conectada en esta sesión.
+**Qué:** revisión inicial de solo lectura: Resend presenta `rafenixcore.com` verificado y habilitado; Railway `production` aún no tenía `RESEND_API_KEY` ni `RESEND_FROM_EMAIL`. La configuración y prueba posterior se registran en la entrada del 2026-11-09. No hay herramienta MCP de Cloudflare conectada en esta sesión.
 
 **Dónde:** consultas de solo lectura a Resend y Railway; `specs/007-platform-admin-access-ui/tasks.md`, `quickstart.md` y `docs/ADMIN_OPERATIONS.md` actualizados con el estado observado.
 

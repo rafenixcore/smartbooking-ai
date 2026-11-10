@@ -44,7 +44,7 @@ Sin clave o remitente configurados, la invitación se conserva y su
 `sent` significa que Resend aceptó la solicitud; no prueba que el correo llegó a
 la bandeja. El token plano solo se usa dentro del proceso de envío y no se
 devuelve en API ni se escribe en logs. En la revisión de Railway `production`
-(2026-11-09), ambas variables faltaban. El 2026-11-10 se configuró una clave
+(2026-11-09), ambas variables faltaban. El 2026-11-09 se configuró una clave
 Resend con permiso de envío limitada al dominio `rafenixcore.com`; el valor
 secreto está solo en Railway y no se registra aquí. El backend redeployó
 correctamente. Resend confirmó como `delivered` un correo de prueba enviado desde

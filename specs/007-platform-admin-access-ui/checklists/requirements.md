@@ -17,7 +17,7 @@
 ## Decisiones de implementación y publicación
 
 - [x] Aprobar 72 horas para invitación y una hora para recuperación. Ambos valores fueron confirmados por el usuario; el 2026-11-09 también confirmó 5 solicitudes por correo y 20 por IP cada hora para recuperación.
-- [x] Usar `rafenixcore.com` para correo corporativo; Resend confirmó el dominio y se configuró el remitente `SmartBooking <no-reply@rafenixcore.com>` en Railway el 2026-11-10.
+- [x] Usar `rafenixcore.com` para correo corporativo; Resend confirmó el dominio y se configuró el remitente `SmartBooking <no-reply@rafenixcore.com>` en Railway el 2026-11-09.
 - [x] Aprobar Turno, propuesta 1, como logo de producto; el usuario la eligió el 2026-11-09 y se integró en UI y correo.
 - [x] No presentar gasto de Meta como real durante esta fase: sin conciliación con una fuente de facturación, el panel lo marca «no disponible» o muestra una estimación identificada como tal. La integración contable queda fuera de esta fase.
 
