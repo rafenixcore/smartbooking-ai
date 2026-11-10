@@ -7,6 +7,7 @@ from app.models import Appointment, Customer, Service, WaitlistEntry, Business
 from app.services import db_service
 from app.services.telegram_client import telegram_client
 from app.services.whatsapp_client import WhatsAppAPIError, whatsapp_client
+from app.services.message_ledger import record_outbound_response
 from app.utils.channel_phone import normalize_channel_phone
 from app.utils.date_parse import format_date_human_es
 
@@ -73,14 +74,22 @@ async def _send_window_reminders(db, window_start, window_end, label, flag_attr)
             logger.info("reminder_skip_no_phone business=%s appt=%s", appt.business_id, appt.id)
 
 
-async def _attempt_send(db, appt, flag_attr, label, chat_desc, send_fn):
+async def _attempt_send(db, appt, flag_attr, label, chat_desc, send_fn, *, ledger_whatsapp=False):
     """Envío por fila con savepoint: fallo → se revierte solo esa fila y se
     reintenta en la próxima pasada; el flag solo se marca si el envío llega bien.
     (Un rollback full expiraría todas las filas cargadas y el siguiente acceso a
     customer.phone_number lanzaría MissingGreenlet, matando el job.)"""
     try:
         async with db.begin_nested():
-            await send_fn()
+            response = await send_fn()
+            if ledger_whatsapp:
+                try:
+                    async with db.begin_nested():
+                        await record_outbound_response(db, appt.business_id, response)
+                except Exception:
+                    # Meta ya aceptó el envío. La falla de telemetría no debe
+                    # dejar el flag en falso y provocar otro recordatorio.
+                    logger.exception("reminder_ledger_failed appt=%s", appt.id)
             setattr(appt, flag_attr, True)
     except WhatsAppAPIError as e:
         if e.code == 133010:
@@ -151,6 +160,7 @@ async def _send_whatsapp_reminder(db, appt, customer, service, business, label, 
             },
             phone_number_id=waba,
         ),
+        ledger_whatsapp=True,
     )
 
 async def process_waitlist_expiration():

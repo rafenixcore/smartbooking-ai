@@ -6,7 +6,7 @@ from app.schemas import OwnerOut
 
 router = APIRouter()
 
-# POST público de creación de dueños eliminado: usar POST /api/auth/register
+# El alta de dueños se realiza únicamente al aceptar una invitación de plataforma.
 
 
 @router.get("/me", response_model=OwnerOut)

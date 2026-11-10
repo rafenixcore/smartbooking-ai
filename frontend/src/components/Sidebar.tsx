@@ -12,11 +12,11 @@ import {
   Clock,
   CalendarClock,
   LogOut,
-  Store,
   MessageCircle,
   Settings,
 } from 'lucide-react'
 import { cn } from '@/utils/cn'
+import BrandMark from '@/components/BrandMark'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -42,9 +42,7 @@ export default function Sidebar({ onItemClick }: { onItemClick?: () => void }) {
     <div className="flex flex-col h-full w-full bg-card text-card-foreground">
       {/* Logo */}
       <div className="flex items-center h-16 px-6 border-b border-border/40">
-        <div className="p-2 bg-primary/10 rounded-lg mr-3">
-          <Store className="w-6 h-6 text-primary" />
-        </div>
+        <BrandMark size={40} className="mr-3 rounded-lg" />
         <span className="text-lg font-bold tracking-tight">SmartBooking</span>
       </div>
 

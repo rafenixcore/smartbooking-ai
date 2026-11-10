@@ -24,6 +24,7 @@ const mockBusiness = {
   is_active: true,
   daily_notification_enabled: true,
   created_at: '2026-01-01T00:00:00Z',
+  onboarding_completed_at: '2026-01-01T00:00:00Z',
 }
 
 test.describe('Autenticación (API mockeada)', () => {
@@ -73,17 +74,18 @@ test.describe('Autenticación (API mockeada)', () => {
     await page.goto('/login')
     await expect(page.getByRole('heading', { name: /SmartBooking/i })).toBeVisible()
 
-    await page.locator('#email').fill('e2e@test.com')
-    await page.locator('#password').fill('secret123')
-    await page.getByRole('button', { name: /Iniciar sesión/i }).click()
+    await page.getByLabel('Correo electrónico').fill('e2e@test.com')
+    await page.getByRole('textbox', { name: 'Contraseña' }).fill('secret123')
+    await page.getByRole('button', { name: /Entrar a mi cuenta/i }).click()
 
     await expect(page).toHaveURL(/\/dashboard/)
-    await expect(page.getByRole('heading', { name: /^Dashboard$/ })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Resumen', exact: true })).toBeVisible()
     await expect(page.getByText('Negocio E2E', { exact: true }).first()).toBeVisible()
   })
 
-  test('página de registro es accesible', async ({ page }) => {
+  test('el registro público redirige al acceso por invitación', async ({ page }) => {
     await page.goto('/register')
-    await expect(page.getByRole('heading', { name: /Crear cuenta/i })).toBeVisible()
+    await expect(page).toHaveURL(/\/login$/)
+    await expect(page.getByText(/el administrador te enviará una invitación por correo/i)).toBeVisible()
   })
 })

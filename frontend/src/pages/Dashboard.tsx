@@ -154,7 +154,7 @@ export default function Dashboard() {
   const hasServices = services.some((service) => service.is_active)
   const hasSchedule = scheduleRules.some((rule) => rule.is_available)
   const hasTelegramLink = Boolean(telegramActivation?.deep_link || telegramActivation?.invite_token)
-  const hasTestAppointment = todayAppointments.length > 0 || metrics.week.total_appointments > 0
+  const hasAppointment = todayAppointments.length > 0 || metrics.week.total_appointments > 0
   const setupSteps = [
     {
       label: 'Negocio creado',
@@ -186,8 +186,8 @@ export default function Dashboard() {
     },
     {
       label: 'Primera cita',
-      description: 'Crea o recibe una cita de prueba',
-      done: hasTestAppointment,
+      description: 'Crea o recibe una cita en tu agenda',
+      done: hasAppointment,
       href: '/appointments',
       icon: CalendarDays,
     },
@@ -200,7 +200,7 @@ export default function Dashboard() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Dashboard</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Resumen</h1>
           <p className="text-muted-foreground mt-1">
             {currentBusiness?.name} • {formatDate(new Date())}
           </p>
@@ -294,10 +294,11 @@ export default function Dashboard() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Ingresos Hoy</p>
+                <p className="text-sm font-medium text-muted-foreground">Valor de citas hoy</p>
                 <div className="flex items-baseline gap-2">
                   <span className="text-3xl font-bold">{formatCurrency(metrics.today.revenue)}</span>
                 </div>
+                <p className="mt-1 text-xs text-muted-foreground">Según tarifas configuradas; no son pagos recibidos.</p>
               </div>
               <div className="p-3 bg-green-500/10 rounded-xl">
                 <DollarSign className="w-5 h-5 text-green-600 dark:text-green-400" />
@@ -308,7 +309,7 @@ export default function Dashboard() {
               <span className="text-green-600 dark:text-green-400 font-medium mr-1">
                 {metrics.week.occupancy_rate}%
               </span>
-              ocupación
+              de las citas semanales están confirmadas o completadas
             </div>
           </CardContent>
         </Card>
@@ -330,7 +331,7 @@ export default function Dashboard() {
             </div>
             <div className="mt-4 flex items-center text-sm text-muted-foreground">
               <CreditCard className="w-4 h-4 mr-1 text-muted-foreground" />
-              {formatCurrency(metrics.week.revenue)} est.
+              Valor de citas: {formatCurrency(metrics.week.revenue)} <span className="ml-1 text-xs">según tarifa*</span>
             </div>
           </CardContent>
         </Card>
@@ -340,7 +341,7 @@ export default function Dashboard() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Nuevos Clientes</p>
+                <p className="text-sm font-medium text-muted-foreground">Clientes con citas este mes</p>
                 <div className="flex items-baseline gap-2">
                   <span className="text-3xl font-bold">{metrics.month.new_customers}</span>
                 </div>
@@ -351,7 +352,7 @@ export default function Dashboard() {
             </div>
             <div className="mt-4 flex items-center text-sm text-muted-foreground">
               <span className="inline-block w-2 h-2 rounded-full bg-green-500 mr-2"></span>
-              Este mes
+              Personas distintas con cita registrada
             </div>
           </CardContent>
         </Card>
@@ -419,7 +420,10 @@ export default function Dashboard() {
         {/* Top Services */}
         <Card className="h-full">
           <CardHeader className="border-b border-border/40">
-            <CardTitle>Servicios Populares</CardTitle>
+            <div>
+              <CardTitle>Servicios más solicitados este mes</CardTitle>
+              <p className="mt-1 text-xs text-muted-foreground">Conteo de citas confirmadas o completadas; valor según tarifa configurada, no pagos recibidos.</p>
+            </div>
           </CardHeader>
           <CardContent className="p-6">
             {metrics.top_services.length === 0 ? (
@@ -439,7 +443,7 @@ export default function Dashboard() {
                           {service.service_name}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {service.count} reservas totales
+                          {service.count} citas confirmadas o completadas
                         </p>
                       </div>
                     </div>

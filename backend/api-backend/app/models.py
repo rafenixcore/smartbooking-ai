@@ -1,6 +1,7 @@
 from sqlalchemy import (
     Column,
     Integer,
+    BigInteger,
     String,
     Boolean,
     ForeignKey,
@@ -11,6 +12,11 @@ from sqlalchemy import (
     Float,
     Date,
     UniqueConstraint,
+    CheckConstraint,
+    Index,
+    Numeric,
+    func,
+    text,
 )
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
@@ -20,11 +26,13 @@ class Owner(Base):
     __tablename__ = "owners"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, nullable=False)
+    name = Column(String, nullable=True)
     email = Column(String, unique=True, index=True, nullable=False)
     phone = Column(String, nullable=True)
     hashed_password = Column(String, nullable=False)
     email_verified = Column(Boolean, default=False, nullable=False)
+    is_active = Column(Boolean, nullable=False, server_default=text("true"))
+    access_revoked_at = Column(DateTime(timezone=True), nullable=True)
     verification_token = Column(String, nullable=True)
     verification_token_expires_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
@@ -33,6 +41,8 @@ class Owner(Base):
     refresh_tokens = relationship(
         "RefreshToken", back_populates="owner", cascade="all, delete-orphan"
     )
+    memberships = relationship("BusinessMembership", back_populates="user")
+    password_resets = relationship("PasswordReset", back_populates="owner")
     deleted_schedule_exceptions = relationship(
         "ScheduleException",
         back_populates="deleted_by_owner",
@@ -72,6 +82,7 @@ class Business(Base):
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     telegram_invite_token = Column(String, unique=True, nullable=True, index=True)
     telegram_first_contact_at = Column(DateTime(timezone=True), nullable=True)
+    onboarding_completed_at = Column(DateTime(timezone=True), nullable=True)
 
     owner_id = Column(Integer, ForeignKey("owners.id"))
     owner = relationship("Owner", back_populates="businesses")
@@ -93,6 +104,254 @@ class Business(Base):
     telegram_user_bindings = relationship(
         "TelegramUserBinding", back_populates="business", cascade="all, delete"
     )
+    memberships = relationship("BusinessMembership", back_populates="business")
+    message_events = relationship("MessageEvent", back_populates="business")
+    message_cost_records = relationship("MessageCostRecord", back_populates="business")
+
+
+class PlatformAdmin(Base):
+    __tablename__ = "platform_admins"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    email = Column(String, nullable=False)
+    hashed_password = Column(String, nullable=False)
+    is_active = Column(Boolean, nullable=False, server_default=text("true"))
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    __table_args__ = (
+        Index("uq_platform_admins_email_ci", func.lower(email), unique=True),
+    )
+
+    sessions = relationship("PlatformAdminSession", back_populates="admin")
+    invitations = relationship("OwnerInvitation", back_populates="invited_by_admin")
+    password_resets = relationship("PasswordReset", back_populates="platform_admin")
+    audit_events = relationship("AdminAuditEvent", back_populates="admin")
+
+
+class PlatformAdminSession(Base):
+    __tablename__ = "platform_admin_sessions"
+    __table_args__ = (
+        UniqueConstraint("token_hash", name="uq_platform_admin_sessions_token_hash"),
+    )
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    admin_id = Column(
+        Integer, ForeignKey("platform_admins.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    token_hash = Column(String(64), nullable=False)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    revoked_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+    admin = relationship("PlatformAdmin", back_populates="sessions")
+
+
+class PlatformLoginAttempt(Base):
+    __tablename__ = "platform_login_attempts"
+    __table_args__ = (
+        Index("ix_platform_login_attempts_email_time", "email_hash", "created_at"),
+        Index("ix_platform_login_attempts_ip_time", "ip_hash", "created_at"),
+    )
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    email_hash = Column(String(64), nullable=False)
+    ip_hash = Column(String(64), nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class BusinessMembership(Base):
+    __tablename__ = "business_memberships"
+    __table_args__ = (
+        CheckConstraint("role IN ('owner', 'member')", name="ck_business_memberships_role"),
+        UniqueConstraint("business_id", "user_id", name="uq_business_memberships_pair"),
+        Index(
+            "uq_business_memberships_active_owner",
+            "business_id",
+            unique=True,
+            postgresql_where=text("role = 'owner' AND is_active"),
+        ),
+    )
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    business_id = Column(
+        Integer, ForeignKey("businesses.id", ondelete="CASCADE"), nullable=False
+    )
+    user_id = Column(
+        Integer, ForeignKey("owners.id", ondelete="RESTRICT"), nullable=False, index=True
+    )
+    role = Column(String(32), nullable=False)
+    is_active = Column(Boolean, nullable=False, server_default=text("true"))
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+    business = relationship("Business", back_populates="memberships")
+    user = relationship("Owner", back_populates="memberships")
+
+
+class OwnerInvitation(Base):
+    __tablename__ = "owner_invitations"
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    email = Column(String, nullable=False)
+    token_hash = Column(String(64), nullable=False)
+    status = Column(String(20), nullable=False, server_default="pending")
+    delivery_status = Column(String(20), nullable=False, server_default="pending")
+    invited_by_admin_id = Column(
+        Integer, ForeignKey("platform_admins.id", ondelete="RESTRICT"), nullable=False
+    )
+    expires_at = Column(DateTime(timezone=True), nullable=False, index=True)
+    sent_at = Column(DateTime(timezone=True), nullable=True)
+    accepted_at = Column(DateTime(timezone=True), nullable=True)
+    revoked_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('pending', 'accepted', 'expired', 'revoked')",
+            name="ck_owner_invitations_status",
+        ),
+        CheckConstraint(
+            "delivery_status IN ('pending', 'sent', 'failed')",
+            name="ck_owner_invitations_delivery_status",
+        ),
+        UniqueConstraint("token_hash", name="uq_owner_invitations_token_hash"),
+        Index(
+            "uq_owner_invitations_pending_email_ci",
+            func.lower(email),
+            unique=True,
+            postgresql_where=text("status = 'pending'"),
+        ),
+    )
+
+    invited_by_admin = relationship("PlatformAdmin", back_populates="invitations")
+
+
+class PasswordReset(Base):
+    __tablename__ = "password_resets"
+    __table_args__ = (
+        CheckConstraint(
+            "(owner_id IS NOT NULL) <> (platform_admin_id IS NOT NULL)",
+            name="ck_password_resets_one_principal",
+        ),
+        UniqueConstraint("token_hash", name="uq_password_resets_token_hash"),
+        Index("ix_password_resets_owner_created", "owner_id", "created_at"),
+        Index("ix_password_resets_admin_created", "platform_admin_id", "created_at"),
+    )
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    owner_id = Column(Integer, ForeignKey("owners.id", ondelete="CASCADE"), nullable=True)
+    platform_admin_id = Column(
+        Integer, ForeignKey("platform_admins.id", ondelete="CASCADE"), nullable=True
+    )
+    token_hash = Column(String(64), nullable=False)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    used_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+    owner = relationship("Owner", back_populates="password_resets")
+    platform_admin = relationship("PlatformAdmin", back_populates="password_resets")
+
+
+class PasswordResetRequestAttempt(Base):
+    __tablename__ = "password_reset_request_attempts"
+    __table_args__ = (
+        Index("ix_password_reset_attempts_email_time", "email_hash", "created_at"),
+        Index("ix_password_reset_attempts_ip_time", "ip_hash", "created_at"),
+        Index("ix_password_reset_attempts_created_at", "created_at"),
+    )
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    email_hash = Column(String(64), nullable=False)
+    ip_hash = Column(String(64), nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class AdminAuditEvent(Base):
+    __tablename__ = "admin_audit_events"
+    __table_args__ = (
+        Index("ix_admin_audit_events_entity", "entity_type", "entity_id"),
+    )
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    admin_id = Column(
+        Integer, ForeignKey("platform_admins.id", ondelete="RESTRICT"), nullable=False
+    )
+    action = Column(String(64), nullable=False)
+    entity_type = Column(String(64), nullable=False)
+    entity_id = Column(String(64), nullable=False)
+    outcome = Column(String(32), nullable=False)
+    details = Column(JSON, nullable=True)
+    created_at = Column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), index=True
+    )
+
+    admin = relationship("PlatformAdmin", back_populates="audit_events")
+
+
+class MessageEvent(Base):
+    __tablename__ = "message_events"
+    __table_args__ = (
+        CheckConstraint("direction IN ('inbound', 'outbound')", name="ck_message_events_direction"),
+        UniqueConstraint("business_id", "channel", "event_key", name="uq_message_events_identity"),
+        Index("ix_message_events_business_time", "business_id", "occurred_at"),
+        Index("ix_message_events_provider_message", "channel", "provider_message_id"),
+    )
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    business_id = Column(Integer, ForeignKey("businesses.id", ondelete="RESTRICT"), nullable=False)
+    channel = Column(String(32), nullable=False)
+    event_key = Column(String(128), nullable=False)
+    provider_message_id = Column(String, nullable=True)
+    provider_event_id = Column(String, nullable=True)
+    direction = Column(String(16), nullable=False)
+    status = Column(String(32), nullable=False)
+    category = Column(String(32), nullable=True)
+    country = Column(String(8), nullable=True)
+    occurred_at = Column(DateTime(timezone=True), nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+    business = relationship("Business", back_populates="message_events")
+    cost_records = relationship("MessageCostRecord", back_populates="message_event")
+
+
+class MessageCostRecord(Base):
+    __tablename__ = "message_cost_records"
+    __table_args__ = (
+        CheckConstraint("amount >= 0", name="ck_message_cost_records_nonnegative"),
+        CheckConstraint(
+            "source IN ('estimated', 'reconciled')", name="ck_message_cost_records_source"
+        ),
+        CheckConstraint(
+            "(period_start IS NULL AND period_end IS NULL) OR "
+            "(period_start IS NOT NULL AND period_end IS NOT NULL AND period_end > period_start)",
+            name="ck_message_cost_records_period",
+        ),
+        CheckConstraint(
+            "source <> 'reconciled' OR "
+            "(reconciled_at IS NOT NULL AND evidence_reference IS NOT NULL "
+            "AND period_start IS NOT NULL)",
+            name="ck_message_cost_records_reconciled_evidence",
+        ),
+        UniqueConstraint("business_id", "idempotency_key", name="uq_message_cost_records_identity"),
+        Index("ix_message_cost_records_business_created", "business_id", "created_at"),
+        Index("ix_message_cost_records_business_period", "business_id", "period_start"),
+    )
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    business_id = Column(Integer, ForeignKey("businesses.id", ondelete="RESTRICT"), nullable=False)
+    message_event_id = Column(
+        BigInteger, ForeignKey("message_events.id", ondelete="RESTRICT"), nullable=True
+    )
+    idempotency_key = Column(String(128), nullable=False)
+    amount = Column(Numeric(14, 6), nullable=False)
+    currency = Column(String(3), nullable=False)
+    source = Column(String(16), nullable=False)
+    rate_version = Column(String(64), nullable=True)
+    evidence_reference = Column(String, nullable=True)
+    period_start = Column(DateTime(timezone=True), nullable=True)
+    period_end = Column(DateTime(timezone=True), nullable=True)
+    reconciled_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+    business = relationship("Business", back_populates="message_cost_records")
+    message_event = relationship("MessageEvent", back_populates="cost_records")
 
 
 class TelegramUserBinding(Base):

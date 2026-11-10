@@ -2,6 +2,7 @@ import pytest
 from fastapi import HTTPException
 
 from app.api.businesses import create_business
+from app.models import BusinessMembership
 from app.schemas import BusinessCreate
 
 
@@ -28,7 +29,7 @@ class _FakeOwner:
 class _FakeDb:
     def __init__(self, existing_business_id=None):
         self.existing_business_id = existing_business_id
-        self.added = None
+        self.added = []
         self.committed = False
         self.refreshed = False
 
@@ -36,7 +37,10 @@ class _FakeDb:
         return _ExecuteResult(self.existing_business_id)
 
     def add(self, item):
-        self.added = item
+        self.added.append(item)
+
+    async def flush(self):
+        self.added[0].id = 99
 
     async def commit(self):
         self.committed = True
@@ -62,7 +66,12 @@ async def test_create_business_allowed_when_owner_has_no_business():
     created = await create_business(_business_payload(), db=db, current_owner=_FakeOwner())
 
     assert created.owner_id == _FakeOwner.id
-    assert db.added is created
+    assert db.added[0] is created
+    assert isinstance(db.added[1], BusinessMembership)
+    assert db.added[1].business_id == created.id
+    assert db.added[1].user_id == _FakeOwner.id
+    assert db.added[1].role == "owner"
+    assert db.added[1].is_active is True
     assert db.committed is True
     assert db.refreshed is True
 
@@ -76,5 +85,5 @@ async def test_create_business_blocks_second_business_for_mvp():
 
     assert exc.value.status_code == 409
     assert "un negocio por dueño" in exc.value.detail
-    assert db.added is None
+    assert db.added == []
     assert db.committed is False

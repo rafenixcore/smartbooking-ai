@@ -26,20 +26,6 @@ export interface LoginResponse {
   user: User
 }
 
-export interface RegisterPayload {
-  name: string
-  email: string
-  password: string
-  phone?: string
-}
-
-export interface RegisterApiResponse {
-  message: string
-  access_token?: string
-  refresh?: string
-  user?: User
-}
-
 // ============================================================================
 // OWNER & BUSINESS TYPES
 // ============================================================================
@@ -70,6 +56,7 @@ export interface Business {
   config_json?: Record<string, unknown>
   is_active: boolean
   daily_notification_enabled: boolean
+  onboarding_completed_at?: string | null
   created_at: string
   updated_at: string
 }
@@ -81,6 +68,11 @@ export interface BusinessFormData {
   category?: string
   description?: string
   address?: string
+}
+
+export interface OwnerInvitationPreview {
+  email: string
+  expires_at: string
 }
 
 // ============================================================================

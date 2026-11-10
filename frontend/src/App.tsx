@@ -11,8 +11,10 @@ import { NotFound } from './pages/NotFound'
 import { ErrorBoundary } from './components/ui/ErrorBoundary'
 
 const Login = lazy(() => import('./pages/Login'))
-const Register = lazy(() => import('./pages/Register'))
 const VerifyEmail = lazy(() => import('./pages/VerifyEmail'))
+const AcceptInvitation = lazy(() => import('./pages/AcceptInvitation'))
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'))
+const ResetPassword = lazy(() => import('./pages/ResetPassword'))
 const Dashboard = lazy(() => import('./pages/Dashboard'))
 const TestUI = lazy(() => import('./pages/TestUI'))
 const Calendar = lazy(() => import('./pages/Calendar').then((mod) => ({ default: mod.Calendar })))
@@ -22,6 +24,14 @@ const Services = lazy(() => import('./pages/Services').then((mod) => ({ default:
 const Schedule = lazy(() => import('./pages/Schedule').then((mod) => ({ default: mod.Schedule })))
 const TelegramIntegration = lazy(() => import('./pages/TelegramIntegration'))
 const BusinessSettings = lazy(() => import('./pages/BusinessSettings'))
+const AdminLogin = lazy(() => import('./pages/platform/AdminLogin'))
+const AdminRoutes = lazy(() => import('./pages/platform/AdminRoutes'))
+const AdminOverview = lazy(() => import('./pages/platform/AdminOverview'))
+const AdminBusinesses = lazy(() => import('./pages/platform/AdminBusinesses'))
+const AdminBusinessDetail = lazy(() => import('./pages/platform/AdminBusinessDetail'))
+const AdminInvitations = lazy(() => import('./pages/platform/AdminInvitations'))
+const AdminAudit = lazy(() => import('./pages/platform/AdminAudit'))
+const AdminMetrics = lazy(() => import('./pages/platform/Metrics'))
 
 // Create QueryClient instance
 const queryClient = new QueryClient({
@@ -62,8 +72,20 @@ function App() {
             <Routes>
               {/* Public Routes */}
               <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
+              <Route path="/register" element={<Navigate to="/login" replace />} />
               <Route path="/verify-email" element={<VerifyEmail />} />
+              <Route path="/invitation" element={<AcceptInvitation />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/admin/login" element={<AdminLogin />} />
+              <Route path="/admin" element={<AdminRoutes />}>
+                <Route index element={<AdminOverview />} />
+                <Route path="businesses" element={<AdminBusinesses />} />
+                <Route path="businesses/:businessId" element={<AdminBusinessDetail />} />
+                <Route path="invitations" element={<AdminInvitations />} />
+                <Route path="audit" element={<AdminAudit />} />
+                <Route path="metrics" element={<AdminMetrics />} />
+              </Route>
               {import.meta.env.DEV && <Route path="/test-ui" element={<TestUI />} />}
 
               {/* Protected Routes */}

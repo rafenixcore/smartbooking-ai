@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
-from sqlalchemy import and_
+from sqlalchemy import and_, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
@@ -12,16 +12,16 @@ from app.core.database import get_db
 from app.core.security import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
     create_access_token,
-    get_password_hash,
     verify_password,
 )
 from app.core.dependencies import get_current_owner
-from app.models import Owner
+from app.models import Owner, RefreshToken
 from app.schemas import (
-    OwnerCreate,
+    OwnerInvitationAccept,
+    OwnerInvitationPreviewRequest,
+    OwnerInvitationPreviewOut,
     RefreshTokenBody,
     RefreshTokenResponse,
-    RegisterResult,
     ResendVerificationBody,
     Token,
     VerifyEmailBody,
@@ -33,8 +33,42 @@ from app.services.refresh_token_service import (
     issue_refresh_token,
     revoke_all_refresh_tokens,
 )
+from app.services.owner_invitations import (
+    InvitationError,
+    accept_invitation,
+    get_invitation_preview,
+)
 
 router = APIRouter()
+
+
+@router.post("/invitations/accept")
+async def accept_owner_invitation(
+    body: OwnerInvitationAccept,
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        await accept_invitation(db, body.token, body.password)
+    except InvitationError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="La invitación no es válida o ha vencido. Solicita una nueva.",
+        ) from None
+    return {"ok": True}
+
+
+@router.post("/invitations/preview", response_model=OwnerInvitationPreviewOut)
+async def preview_owner_invitation(
+    body: OwnerInvitationPreviewRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        return await get_invitation_preview(db, body.token)
+    except InvitationError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="La invitación no es válida o ha vencido. Solicita una nueva.",
+        ) from None
 
 
 @router.post("/token", response_model=Token)
@@ -42,10 +76,14 @@ async def login_for_access_token(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(Owner).filter(Owner.email == form_data.username))
+    # El lock serializa login y reset: una contraseña anterior no puede emitir
+    # un refresh después de que se haya confirmado una nueva contraseña.
+    result = await db.execute(
+        select(Owner).filter(Owner.email == form_data.username).with_for_update()
+    )
     owner = result.scalars().first()
 
-    if not owner or not verify_password(form_data.password, owner.hashed_password):
+    if not owner or not owner.is_active or not verify_password(form_data.password, owner.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
@@ -60,12 +98,13 @@ async def login_for_access_token(
 
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"email": owner.email, "sub": str(owner.id)},
+        data={"email": owner.email, "sub": str(owner.id), "principal_type": "owner"},
         expires_delta=access_token_expires,
         token_kind="access",
     )
 
-    refresh_plain = await issue_refresh_token(owner.id)
+    refresh_plain = await issue_refresh_token(owner.id, db=db)
+    await db.commit()
 
     return {
         "access_token": access_token,
@@ -78,7 +117,7 @@ async def login_for_access_token(
 @router.post("/refresh", response_model=RefreshTokenResponse)
 async def refresh_access_token(body: RefreshTokenBody):
     owner, new_refresh = await consume_and_rotate_refresh(body.refresh)
-    if not owner or not new_refresh:
+    if not owner or not new_refresh or not owner.is_active:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Refresh token inválido o expirado",
@@ -90,7 +129,7 @@ async def refresh_access_token(body: RefreshTokenBody):
         )
 
     access_token = create_access_token(
-        data={"email": owner.email, "sub": str(owner.id)},
+        data={"email": owner.email, "sub": str(owner.id), "principal_type": "owner"},
         expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
         token_kind="access",
     )
@@ -98,62 +137,17 @@ async def refresh_access_token(body: RefreshTokenBody):
 
 
 @router.post("/logout")
-async def logout(current_owner: Owner = Depends(get_current_owner)):
-    await revoke_all_refresh_tokens(current_owner.id)
-    return {"ok": True}
-
-
-@router.post("/register", response_model=RegisterResult)
-async def register_owner(owner_in: OwnerCreate, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Owner).filter(Owner.email == owner_in.email))
-    if result.scalars().first():
-        raise HTTPException(status_code=400, detail="Email already registered")
-
-    now = datetime.now(timezone.utc)
-    verified = not config.REQUIRE_EMAIL_VERIFICATION
-    v_token = None
-    v_expires = None
-    if not verified:
-        v_token = secrets.token_urlsafe(24)
-        v_expires = now + timedelta(hours=48)
-
-    new_owner = Owner(
-        name=owner_in.name,
-        email=owner_in.email,
-        phone=owner_in.phone,
-        hashed_password=get_password_hash(owner_in.password),
-        email_verified=verified,
-        verification_token=v_token if not verified else None,
-        verification_token_expires_at=v_expires,
-    )
-    db.add(new_owner)
+async def logout(
+    current_owner: Owner = Depends(get_current_owner),
+    db: AsyncSession = Depends(get_db),
+):
+    owner = (await db.execute(
+        select(Owner).where(Owner.id == current_owner.id).with_for_update()
+    )).scalar_one()
+    owner.access_revoked_at = datetime.now(timezone.utc)
+    await db.execute(delete(RefreshToken).where(RefreshToken.owner_id == owner.id))
     await db.commit()
-    await db.refresh(new_owner)
-
-    if verified:
-        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-        access_token = create_access_token(
-            data={"email": new_owner.email, "sub": str(new_owner.id)},
-            expires_delta=access_token_expires,
-            token_kind="access",
-        )
-        refresh_plain = await issue_refresh_token(new_owner.id)
-        return RegisterResult(
-            message="Cuenta creada. Ya podés iniciar sesión.",
-            access_token=access_token,
-            refresh=refresh_plain,
-            user=new_owner,
-        )
-
-    await send_verification_email(new_owner.email, v_token, new_owner.name)
-
-    return RegisterResult(
-        message=(
-            "Cuenta creada. Si SMTP está configurado, te enviamos un enlace al correo. "
-            "Si no, revisá los logs del servidor o usá «Reenviar verificación»."
-        ),
-        user=new_owner,
-    )
+    return {"ok": True}
 
 
 @router.post("/resend-verification")

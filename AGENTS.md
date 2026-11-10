@@ -8,6 +8,7 @@ Primary context for this repository:
 - `.specify/memory/constitution.md` defines non-negotiable project principles.
 - `specs/000-project-baseline/` documents the current SmartBooking AI system.
 - `specs/001-guided-menu-bot/` documents the next planned conversational phase.
+- `specs/007-platform-admin-access-ui/plan.md` and `tasks.md` document the active commercial UI, invitation/recovery flows, and platform administration phase; check their current status before release.
 
 Main rule: specs are the source of truth. If older docs conflict with
 `specs/000-project-baseline/`, follow the baseline and update stale docs when

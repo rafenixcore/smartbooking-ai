@@ -11,6 +11,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import config
 from app.api import (
     auth,
+    password_reset,
+    platform_auth,
+    platform_invitations,
+    platform_businesses,
+    platform_audit,
+    platform_metrics,
     owners,
     businesses,
     services,
@@ -21,6 +27,7 @@ from app.api import (
     internal_jobs,
 )
 from app.services import db_service, whatsapp_client, conversation_manager
+from app.core.database import AsyncSessionLocal
 from app.services.background_tasks import (
     process_appointment_reminders,
     process_waitlist_expiration,
@@ -34,6 +41,7 @@ from app.services.guided_menu_router import (
 )
 from app.services.whatsapp_renderer import render_bot_reply, strip_html
 from app.services.idempotency import should_process_channel_event
+from app.services.message_ledger import record_outbound_response, record_whatsapp_status_payload
 from app.utils.channel_phone import normalize_channel_phone
 from app.core.scheduler import start_scheduler, shutdown_scheduler, scheduler
 from app.core.webhook_security import telegram_secret_is_valid
@@ -136,6 +144,12 @@ async def api_root():
 
 
 app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
+app.include_router(password_reset.router, prefix="/api/auth", tags=["Password Reset"])
+app.include_router(platform_auth.router, prefix="/api/platform/auth", tags=["Platform Auth"])
+app.include_router(platform_invitations.router, prefix="/api/platform/invitations", tags=["Platform Invitations"])
+app.include_router(platform_businesses.router, prefix="/api/platform/businesses", tags=["Platform Businesses"])
+app.include_router(platform_audit.router, prefix="/api/platform/audit", tags=["Platform Audit"])
+app.include_router(platform_metrics.router, prefix="/api/platform/metrics", tags=["Platform Metrics"])
 app.include_router(owners.router, prefix="/api/owners", tags=["Owners"])
 app.include_router(businesses.router, prefix="/api/businesses", tags=["Businesses"])
 app.include_router(services.router, prefix="/api/businesses", tags=["Services"])
@@ -236,6 +250,18 @@ async def whatsapp_webhook(request: Request):
         # 2. Parsear payload
         payload = await request.json()
 
+        # Un callback puede contener varios estados. La evidencia se confirma
+        # antes de responder 200 para que Meta pueda reintentar si falla la BD.
+        try:
+            async with AsyncSessionLocal() as db:
+                ledger_result = await record_whatsapp_status_payload(db, payload)
+                await db.commit()
+        except Exception as exc:
+            logger.exception("wa_ledger_status_failed")
+            raise HTTPException(status_code=503, detail="Estado no registrado") from exc
+        if ledger_result.unresolved:
+            logger.warning("wa_status_unresolved count=%s", ledger_result.unresolved)
+
         # 3. Extraer mensaje
         message_data = whatsapp_client.extract_message_from_webhook(payload)
 
@@ -244,15 +270,13 @@ async def whatsapp_webhook(request: Request):
             return {"status": "ok"}
 
         if message_data.get("type") == "status_update":
-            # Telemetría de entrega de Meta (sent/delivered/read/failed): se
-            # loguea estructurado (base para reenvíos, bloqueos y costos — Meta
-            # cobra por plantilla entregada) y no se procesa como mensaje.
+            # El estado ya quedó registrado; no es un mensaje entrante.
             logger.info(
-                "wa_status_update status=%s wamid=%s recipient=%s business_phone=%s",
+                "wa_status_update status=%s wamid=%s business_phone=%s recorded=%s",
                 message_data.get("status"),
                 message_data.get("message_id"),
-                message_data.get("recipient_id"),
                 message_data.get("business_phone_number_id"),
+                ledger_result.recorded,
             )
             return {"status": "ok"}
 
@@ -298,11 +322,11 @@ async def whatsapp_webhook(request: Request):
             is_ai_message=decision.uses_ai,
         )
         if not quota["allowed"]:
-            await whatsapp_client.send_text_message(
+            await _send_whatsapp_and_record(business_id, whatsapp_client.send_text_message(
                 to=phone_number,
                 message=quota["message"],
                 phone_number_id=message_data["business_phone_number_id"],
-            )
+            ))
             return {"status": "ok"}
 
         resp = await execute_guided_route(business_id, phone_number, decision, context)
@@ -321,25 +345,25 @@ async def whatsapp_webhook(request: Request):
             render = render_bot_reply(resp)
             pid = message_data["business_phone_number_id"]
             if render.kind == "list":
-                await whatsapp_client.send_list_message(
+                await _send_whatsapp_and_record(business_id, whatsapp_client.send_list_message(
                     to=phone_number,
                     body_text=render.text,
                     sections=render.sections,
                     phone_number_id=pid,
-                )
+                ))
             elif render.kind == "button":
-                await whatsapp_client.send_interactive_buttons(
+                await _send_whatsapp_and_record(business_id, whatsapp_client.send_interactive_buttons(
                     to=phone_number,
                     body_text=render.text,
                     buttons=render.buttons,
                     phone_number_id=pid,
-                )
+                ))
             else:
-                await whatsapp_client.send_text_message(
+                await _send_whatsapp_and_record(business_id, whatsapp_client.send_text_message(
                     to=phone_number,
                     message=render.text,
                     phone_number_id=pid,
-                )
+                ))
             await conversation_manager.save_message(
                 business_id, phone_number, "assistant", resp
             )
@@ -358,13 +382,28 @@ async def whatsapp_webhook(request: Request):
         # run_conversation_turn devuelve str: el path NLU queda solo texto (sin
         # interactivos) hasta que el orchestrator emita BotReply.
         out_text = strip_html(getattr(response_text, "text_plain", None) or str(response_text))
-        await whatsapp_client.send_text_message(
+        await _send_whatsapp_and_record(business_id, whatsapp_client.send_text_message(
             to=phone_number,
             message=out_text,
             phone_number_id=message_data["business_phone_number_id"],
-        )
+        ))
         return {"status": "ok"}
 
+    except HTTPException:
+        raise
     except Exception:
         logger.exception("Error en webhook WhatsApp")
         return {"status": "error"}
+
+
+async def _send_whatsapp_and_record(business_id: int, operation):
+    """Guarda el ID de Meta sin repetir un envío que ya fue aceptado."""
+    response = await operation
+    try:
+        async with AsyncSessionLocal() as db:
+            if await record_outbound_response(db, business_id, response):
+                await db.commit()
+    except Exception:
+        # El mensaje ya salió; un error de bitácora no debe reenviarlo.
+        logger.exception("wa_ledger_outbound_failed business=%s", business_id)
+    return response

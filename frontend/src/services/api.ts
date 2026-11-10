@@ -6,8 +6,6 @@ import { toast } from 'sonner'
 import type {
   LoginCredentials,
   LoginResponse,
-  RegisterApiResponse,
-  RegisterPayload,
   Business,
   BusinessFormData,
   Service,
@@ -29,7 +27,17 @@ import type {
   TelegramActivation,
   TimeBlock,
   TimeBlockFormData,
+  OwnerInvitationPreview,
 } from '@/types'
+import type {
+  PlatformAdmin,
+  PlatformBusiness,
+  PlatformInvitation,
+  PlatformBusinessPage,
+  PlatformInvitationPage,
+  AdminAuditPage,
+  PlatformMetricsResponse,
+} from '@/types/platform'
 
 const API_BASE_URL =
   (import.meta.env?.VITE_API_URL as string | undefined) ||
@@ -53,6 +61,45 @@ const api = axios.create({
   },
 })
 
+const platformApi = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: 10000,
+  headers: { 'Content-Type': 'application/json' },
+})
+
+platformApi.interceptors.request.use((config) => {
+  const token = localStorage.getItem('platform_access_token')
+  if (token) config.headers.Authorization = `Bearer ${token}`
+  return config
+})
+
+platformApi.interceptors.response.use(
+  (response) => response,
+  async (error: AxiosError) => {
+    const request = error.config as InternalAxiosRequestConfig & { _platformRetry?: boolean }
+    if (error.response?.status === 401 && request && !request._platformRetry) {
+      request._platformRetry = true
+      const refresh = localStorage.getItem('platform_refresh_token')
+      if (refresh) {
+        try {
+          const { data } = await apiPublic.post<{ access_token: string; refresh: string }>(
+            '/platform/auth/refresh', { refresh }
+          )
+          localStorage.setItem('platform_access_token', data.access_token)
+          localStorage.setItem('platform_refresh_token', data.refresh)
+          request.headers.Authorization = `Bearer ${data.access_token}`
+          return platformApi(request)
+        } catch {
+          // La tienda de plataforma restablecerá el estado al recibir el 401.
+        }
+      }
+      localStorage.removeItem('platform_access_token')
+      localStorage.removeItem('platform_refresh_token')
+    }
+    return Promise.reject(error)
+  }
+)
+
 type RawBusiness = {
   id: number
   owner_id?: number
@@ -68,6 +115,7 @@ type RawBusiness = {
   config_json?: Record<string, unknown> | null
   is_active?: boolean
   daily_notification_enabled?: boolean
+  onboarding_completed_at?: string | null
   created_at?: string
 }
 
@@ -161,6 +209,7 @@ const mapBusiness = (raw: RawBusiness): Business => ({
   config_json: raw.config_json || undefined,
   is_active: raw.is_active ?? true,
   daily_notification_enabled: raw.daily_notification_enabled ?? true,
+  onboarding_completed_at: raw.onboarding_completed_at ?? null,
   created_at: raw.created_at || nowIso(),
   updated_at: raw.created_at || nowIso(),
 })
@@ -275,8 +324,8 @@ function isAuthPath(url: string | undefined): boolean {
   return (
     url.includes('/auth/token') ||
     url.includes('/auth/refresh') ||
-    url.includes('/auth/register') ||
     url.includes('/auth/verify-email') ||
+    url.includes('/auth/password-reset/') ||
     url.includes('/auth/logout')
   )
 }
@@ -368,7 +417,7 @@ function mapOwnerToUser(raw: Record<string, unknown>): LoginResponse['user'] {
   return {
     id: String(raw.id),
     email: String(raw.email),
-    name: String(raw.name),
+    name: String(raw.name ?? ''),
     role: 'owner',
     email_verified: raw.email_verified === true,
     created_at: raw.created_at ? String(raw.created_at) : undefined,
@@ -376,28 +425,12 @@ function mapOwnerToUser(raw: Record<string, unknown>): LoginResponse['user'] {
 }
 
 export const authAPI = {
-  register: async (payload: RegisterPayload): Promise<RegisterApiResponse> => {
-    const regBody: Record<string, unknown> = {
-      name: payload.name,
-      email: payload.email,
-      password: payload.password,
-    }
-    if (payload.phone?.trim()) {
-      regBody.phone = payload.phone.trim()
-    }
-    const response = await api.post<{
-      message: string
-      access_token?: string
-      refresh?: string
-      user?: Record<string, unknown>
-    }>('/auth/register', regBody)
-    const d = response.data
-    return {
-      message: d.message,
-      access_token: d.access_token,
-      refresh: d.refresh,
-      user: d.user ? mapOwnerToUser(d.user) : undefined,
-    }
+  requestPasswordReset: async (email: string): Promise<void> => {
+    await apiPublic.post('/auth/password-reset/request', { email })
+  },
+
+  confirmPasswordReset: async (token: string, password: string): Promise<void> => {
+    await apiPublic.post('/auth/password-reset/confirm', { token, password })
   },
 
   verifyEmail: async (token: string): Promise<void> => {
@@ -406,6 +439,18 @@ export const authAPI = {
 
   resendVerification: async (email: string): Promise<void> => {
     await apiPublic.post('/auth/resend-verification', { email })
+  },
+
+  getInvitation: async (token: string): Promise<OwnerInvitationPreview> => {
+    const response = await apiPublic.post<OwnerInvitationPreview>(
+      '/auth/invitations/preview',
+      { token }
+    )
+    return response.data
+  },
+
+  acceptInvitation: async (token: string, password: string): Promise<void> => {
+    await apiPublic.post('/auth/invitations/accept', { token, password })
   },
 
   login: async (credentials: LoginCredentials): Promise<LoginResponse> => {
@@ -445,6 +490,107 @@ export const authAPI = {
       refresh,
     })
     return { access: data.access_token, refresh: data.refresh }
+  },
+}
+
+export const platformAPI = {
+  login: async (email: string, password: string): Promise<{
+    access_token: string
+    refresh: string
+    admin: PlatformAdmin
+  }> => {
+    const form = new URLSearchParams()
+    form.set('username', email)
+    form.set('password', password)
+    const { data } = await apiPublic.post('/platform/auth/token', form, {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    })
+    return data
+  },
+
+  me: async (): Promise<PlatformAdmin> => {
+    const { data } = await platformApi.get<PlatformAdmin>('/platform/auth/me')
+    return data
+  },
+
+  logout: async (): Promise<void> => {
+    try {
+      await platformApi.post('/platform/auth/logout')
+    } finally {
+      localStorage.removeItem('platform_access_token')
+      localStorage.removeItem('platform_refresh_token')
+    }
+  },
+
+  listBusinesses: async (params: {
+    offset?: number
+    limit?: number
+    status?: 'active' | 'suspended'
+    q?: string
+  } = {}): Promise<PlatformBusinessPage> => {
+    const { data } = await platformApi.get<PlatformBusinessPage>('/platform/businesses', { params })
+    return data
+  },
+
+  getBusiness: async (businessId: number): Promise<PlatformBusiness> => {
+    const { data } = await platformApi.get<PlatformBusiness>(`/platform/businesses/${businessId}`)
+    return data
+  },
+
+  setBusinessActive: async (businessId: number, active: boolean): Promise<PlatformBusiness> => {
+    const action = active ? 'reactivate' : 'suspend'
+    const { data } = await platformApi.post<PlatformBusiness>(
+      `/platform/businesses/${businessId}/${action}`
+    )
+    return data
+  },
+
+  listInvitations: async (params: {
+    offset?: number
+    limit?: number
+    status?: PlatformInvitation['status']
+  } = {}): Promise<PlatformInvitationPage> => {
+    const { data } = await platformApi.get<PlatformInvitationPage>('/platform/invitations', { params })
+    return data
+  },
+
+  createInvitation: async (email: string): Promise<PlatformInvitation> => {
+    const { data } = await platformApi.post<PlatformInvitation>('/platform/invitations', { email })
+    return data
+  },
+
+  resendInvitation: async (invitationId: number): Promise<PlatformInvitation> => {
+    const { data } = await platformApi.post<PlatformInvitation>(
+      `/platform/invitations/${invitationId}/resend`
+    )
+    return data
+  },
+
+  revokeInvitation: async (invitationId: number): Promise<PlatformInvitation> => {
+    const { data } = await platformApi.post<PlatformInvitation>(
+      `/platform/invitations/${invitationId}/revoke`
+    )
+    return data
+  },
+
+  listAudit: async (params: {
+    offset?: number
+    limit?: number
+    entity_type?: string
+    entity_id?: string
+  } = {}): Promise<AdminAuditPage> => {
+    const { data } = await platformApi.get<AdminAuditPage>('/platform/audit', { params })
+    return data
+  },
+
+  getMetrics: async (params: {
+    from: string
+    to: string
+    offset?: number
+    limit?: number
+  }): Promise<PlatformMetricsResponse> => {
+    const { data } = await platformApi.get<PlatformMetricsResponse>('/platform/metrics', { params })
+    return data
   },
 }
 

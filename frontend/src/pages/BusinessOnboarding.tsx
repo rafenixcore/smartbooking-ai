@@ -1,4 +1,4 @@
-import { FormEvent, useState } from 'react'
+import { FormEvent, useEffect, useState } from 'react'
 import { Building2, MapPin, Phone, Store } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button, Card, CardContent, CardHeader, CardTitle, Input } from '@/components/ui'
@@ -11,7 +11,7 @@ type BusinessOnboardingProps = {
 }
 
 export default function BusinessOnboarding({ compact = false, onCreated }: BusinessOnboardingProps) {
-  const { createBusiness, isLoading } = useBusinessStore()
+  const { currentBusiness, createBusiness, updateBusiness, isLoading } = useBusinessStore()
   const [error, setError] = useState<string | null>(null)
   const [form, setForm] = useState<BusinessFormData>({
     name: '',
@@ -20,19 +20,35 @@ export default function BusinessOnboarding({ compact = false, onCreated }: Busin
     address: '',
   })
 
+  useEffect(() => {
+    if (currentBusiness && !currentBusiness.onboarding_completed_at) {
+      setForm({
+        name: currentBusiness.name || '',
+        phone: currentBusiness.phone || '',
+        description: currentBusiness.description || '',
+        address: currentBusiness.address || '',
+      })
+    }
+  }, [currentBusiness])
+
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault()
     setError(null)
 
     try {
       // Categoría/ubicación diferidas post-MVP (fase 1): el backend las tolera opcionales
-      await createBusiness({
+      const profile = {
         name: form.name.trim(),
         phone: form.phone.trim(),
         description: form.description?.trim() || undefined,
         address: form.address?.trim() || undefined,
-      })
-      toast.success('Negocio creado correctamente')
+      }
+      if (currentBusiness) {
+        await updateBusiness(currentBusiness.id, profile)
+      } else {
+        await createBusiness(profile)
+      }
+      toast.success('Información del negocio guardada')
       onCreated?.()
     } catch (err: any) {
       const detail = err?.response?.data?.detail
@@ -49,9 +65,11 @@ export default function BusinessOnboarding({ compact = false, onCreated }: Busin
               <Store className="h-7 w-7" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-foreground">Crea tu negocio</h1>
+                <h1 className="text-3xl font-bold text-foreground">
+                {currentBusiness ? 'Completa el perfil de tu negocio' : 'Registra tu negocio'}
+              </h1>
               <p className="mt-2 text-muted-foreground">
-                Este será el espacio desde donde manejarás servicios, horarios, citas y Telegram.
+                Completa los datos principales para continuar al panel y administrar tus citas.
               </p>
             </div>
           </div>
@@ -68,7 +86,7 @@ export default function BusinessOnboarding({ compact = false, onCreated }: Busin
                 setForm={setForm}
                 error={error}
                 isLoading={isLoading}
-                submitLabel="Crear negocio"
+                submitLabel={currentBusiness ? 'Completar alta' : 'Crear negocio'}
                 onSubmit={handleSubmit}
               />
             </CardContent>
@@ -81,7 +99,7 @@ export default function BusinessOnboarding({ compact = false, onCreated }: Busin
             setForm={setForm}
             error={error}
             isLoading={isLoading}
-            submitLabel="Crear negocio"
+            submitLabel={currentBusiness ? 'Completar alta' : 'Crear negocio'}
             onSubmit={handleSubmit}
           />
         )}
@@ -147,7 +165,7 @@ function BusinessForm({
           value={form.description}
           onChange={(event) => setForm({ ...form, description: event.target.value })}
           rows={4}
-          className="flex w-full rounded-lg border-2 border-input bg-background px-4 py-3 text-sm transition-all duration-200 placeholder:text-muted-foreground hover:border-primary/40 focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
+          className="flex w-full rounded-control border border-input bg-background px-3 py-3 text-sm transition-colors placeholder:text-muted-foreground hover:border-primary/40 focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25"
           placeholder="Opcional. Ej. Cortes clásicos, barba y atención por cita."
         />
       </div>
@@ -163,7 +181,7 @@ function BusinessForm({
         </div>
         <div className="flex items-center gap-2">
           <MapPin className="h-4 w-4 text-primary" />
-          Telegram dedicado
+          Integración con Telegram
         </div>
       </div>
 

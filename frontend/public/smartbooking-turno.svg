@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 116 116">
+  <defs>
+    <linearGradient id="turno" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#2563EB" />
+      <stop offset="1" stop-color="#0EA5A4" />
+    </linearGradient>
+  </defs>
+  <rect width="116" height="116" rx="30" fill="url(#turno)" />
+  <path d="M33 24v11M83 24v11M28 42h60M32 31h52a7 7 0 0 1 7 7v48a7 7 0 0 1-7 7H32a7 7 0 0 1-7-7V38a7 7 0 0 1 7-7Z" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M42 60h13M42 74h25" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" />
+  <circle cx="78" cy="77" r="12" fill="#FBBF24" stroke="#fff" stroke-width="4" />
+</svg>

@@ -1,14 +1,16 @@
+from datetime import datetime, timezone
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy import text
 
 from app.config import config
 from app.core.database import get_db
-from app.core.dependencies import get_current_owner
-from app.models import Business, Owner
+from app.core.dependencies import get_current_owner, require_owned_operational_business
+from app.models import Business, BusinessMembership, Owner
 from app.schemas import (
     BusinessCreate,
     BusinessOut,
@@ -29,8 +31,23 @@ from app.services.telegram_link_service import (
 
 router = APIRouter()
 
+_ONBOARDING_FIELDS = {"name", "phone_number", "category", "description", "address", "latitude", "longitude"}
+
+
+def _required_profile(name: str, phone_number: str) -> tuple[str, str]:
+    name = (name or "").strip()
+    phone_number = (phone_number or "").strip()
+    if not name or not phone_number:
+        raise HTTPException(status_code=422, detail="Nombre y teléfono del negocio son obligatorios")
+    return name, phone_number
+
 @router.post("/", response_model=BusinessOut, status_code=status.HTTP_201_CREATED)
 async def create_business(business_in: BusinessCreate, db: AsyncSession = Depends(get_db), current_owner: Owner = Depends(get_current_owner)):
+    if "is_active" in business_in.model_fields_set:
+        raise HTTPException(status_code=403, detail="El estado del negocio solo lo gestiona la plataforma")
+    name, phone_number = _required_profile(business_in.name, business_in.phone_number)
+    # Serializa altas simultáneas para este dueño hasta el commit.
+    await db.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": 0x53424B0000000000 + current_owner.id})
     result = await db.execute(
         select(Business.id).filter(Business.owner_id == current_owner.id).limit(1)
     )
@@ -43,8 +60,19 @@ async def create_business(business_in: BusinessCreate, db: AsyncSession = Depend
             ),
         )
 
-    new_business = Business(**business_in.model_dump(), owner_id=current_owner.id)
+    new_business = Business(
+        **(business_in.model_dump() | {"name": name, "phone_number": phone_number, "is_active": True}),
+        owner_id=current_owner.id,
+        onboarding_completed_at=datetime.now(timezone.utc),
+    )
     db.add(new_business)
+    await db.flush()
+    db.add(BusinessMembership(
+        business_id=new_business.id,
+        user_id=current_owner.id,
+        role="owner",
+        is_active=True,
+    ))
     await db.commit()
     await db.refresh(new_business)
     return new_business
@@ -55,10 +83,23 @@ async def update_business(business_id: int, business_in: BusinessUpdate, db: Asy
     business = result.scalars().first()
     if not business:
         raise HTTPException(status_code=404, detail="Business not found")
+    if not business.is_active:
+        raise HTTPException(status_code=403, detail="El negocio está suspendido")
 
     update_data = business_in.model_dump(exclude_unset=True)
+    if "is_active" in update_data:
+        raise HTTPException(status_code=403, detail="El estado del negocio solo lo gestiona la plataforma")
+    if business.onboarding_completed_at is None and not set(update_data).issubset(_ONBOARDING_FIELDS):
+        raise HTTPException(status_code=403, detail="Completa el alta del negocio antes de configurar el canal")
+    name, phone_number = _required_profile(
+        update_data.get("name", business.name),
+        update_data.get("phone_number", business.phone_number),
+    )
+    update_data.update(name=name, phone_number=phone_number)
     for key, value in update_data.items():
         setattr(business, key, value)
+    if business.onboarding_completed_at is None:
+        business.onboarding_completed_at = datetime.now(timezone.utc)
 
     try:
         await db.commit()
@@ -76,7 +117,10 @@ async def update_business(business_id: int, business_in: BusinessUpdate, db: Asy
 @router.get("/", response_model=List[BusinessOut])
 async def get_businesses(db: AsyncSession = Depends(get_db), current_owner: Owner = Depends(get_current_owner)):
     result = await db.execute(select(Business).filter(Business.owner_id == current_owner.id))
-    return result.scalars().all()
+    businesses = result.scalars().all()
+    if any(not business.is_active for business in businesses):
+        raise HTTPException(status_code=403, detail="El negocio está suspendido")
+    return businesses
 
 @router.get("/{business_id}", response_model=BusinessOut)
 async def get_business(business_id: int, db: AsyncSession = Depends(get_db), current_owner: Owner = Depends(get_current_owner)):
@@ -84,10 +128,12 @@ async def get_business(business_id: int, db: AsyncSession = Depends(get_db), cur
     business = result.scalars().first()
     if not business:
         raise HTTPException(status_code=404, detail="Business not found")
+    if not business.is_active:
+        raise HTTPException(status_code=403, detail="El negocio está suspendido")
     return business
 
 
-@router.get("/{business_id}/telegram", response_model=TelegramActivationOut)
+@router.get("/{business_id}/telegram", response_model=TelegramActivationOut, dependencies=[Depends(require_owned_operational_business)])
 async def get_telegram_activation(
     business_id: int,
     db: AsyncSession = Depends(get_db),
@@ -117,7 +163,7 @@ async def get_telegram_activation(
     )
 
 
-@router.get("/{business_id}/owner-telegram", response_model=OwnerTelegramActivationOut)
+@router.get("/{business_id}/owner-telegram", response_model=OwnerTelegramActivationOut, dependencies=[Depends(require_owned_operational_business)])
 async def get_owner_telegram_activation(
     business_id: int,
     db: AsyncSession = Depends(get_db),
@@ -161,7 +207,7 @@ async def get_owner_telegram_activation(
     )
 
 
-@router.delete("/{business_id}/owner-telegram", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{business_id}/owner-telegram", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_owned_operational_business)])
 async def unlink_owner_telegram(
     business_id: int,
     db: AsyncSession = Depends(get_db),
@@ -180,7 +226,7 @@ async def unlink_owner_telegram(
     return None
 
 
-@router.delete("/{business_id}/telegram/bindings", response_model=TelegramUnlinkOut)
+@router.delete("/{business_id}/telegram/bindings", response_model=TelegramUnlinkOut, dependencies=[Depends(require_owned_operational_business)])
 async def unlink_customer_telegram_bindings(
     business_id: int,
     db: AsyncSession = Depends(get_db),
@@ -196,7 +242,7 @@ async def unlink_customer_telegram_bindings(
     return TelegramUnlinkOut(unlinked_count=count)
 
 
-@router.post("/{business_id}/telegram/rotate-invite", response_model=TelegramActivationOut)
+@router.post("/{business_id}/telegram/rotate-invite", response_model=TelegramActivationOut, dependencies=[Depends(require_owned_operational_business)])
 async def rotate_telegram_invite(
     business_id: int,
     db: AsyncSession = Depends(get_db),

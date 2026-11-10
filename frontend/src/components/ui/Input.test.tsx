@@ -4,6 +4,10 @@ import { describe, it, expect, vi } from 'vitest'
 import { Input } from './Input'
 
 describe('Input', () => {
+  it('connects its visible label to the input for assistive technology', () => {
+    render(<Input label="Contraseña" />)
+    expect(screen.getByLabelText('Contraseña')).toBeInTheDocument()
+  })
   it('renders an input element', () => {
     render(<Input />)
     expect(screen.getByRole('textbox')).toBeInTheDocument()

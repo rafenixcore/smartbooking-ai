@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720" role="img" aria-labelledby="title description">
+  <title id="title">Conceptos de identidad para SmartBooking</title>
+  <desc id="description">Tres propuestas de símbolo y wordmark en fondos claros y oscuros. Son conceptos pendientes de selección.</desc>
+  <defs>
+    <linearGradient id="blue" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#2563EB"/><stop offset="1" stop-color="#0EA5A4"/></linearGradient>
+    <linearGradient id="violet" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#4F46E5"/><stop offset="1" stop-color="#06B6D4"/></linearGradient>
+    <linearGradient id="green" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#0F766E"/><stop offset="1" stop-color="#22C55E"/></linearGradient>
+  </defs>
+  <rect width="1200" height="720" fill="#F1F5F9"/>
+  <text x="64" y="64" fill="#0F172A" font-family="Inter, Arial, sans-serif" font-size="26" font-weight="700">SmartBooking · propuestas de identidad</text>
+  <text x="64" y="96" fill="#475569" font-family="Inter, Arial, sans-serif" font-size="15">Conceptos de trabajo, todavía no seleccionados</text>
+
+  <g transform="translate(64 132)">
+    <rect width="340" height="520" rx="24" fill="#FFFFFF" stroke="#CBD5E1"/>
+    <text x="28" y="44" fill="#0F172A" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="700">01 · Turno</text>
+    <text x="28" y="70" fill="#64748B" font-family="Inter, Arial, sans-serif" font-size="13">Tiempo reservado con un punto activo</text>
+    <rect x="28" y="100" width="284" height="170" rx="20" fill="#F8FAFC"/>
+    <g transform="translate(112 123)">
+      <rect width="116" height="116" rx="30" fill="url(#blue)"/>
+      <path d="M33 24v11M83 24v11M28 42h60M32 31h52a7 7 0 0 1 7 7v48a7 7 0 0 1-7 7H32a7 7 0 0 1-7-7V38a7 7 0 0 1 7-7Z" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M42 60h13M42 74h25" stroke="#fff" stroke-width="6" stroke-linecap="round"/>
+      <circle cx="78" cy="77" r="12" fill="#FBBF24" stroke="#fff" stroke-width="4"/>
+    </g>
+    <g transform="translate(28 296)">
+      <rect width="128" height="92" rx="16" fill="#F8FAFC" stroke="#E2E8F0"/>
+      <g transform="translate(49 18) scale(.26)"><rect width="116" height="116" rx="30" fill="url(#blue)"/><path d="M33 24v11M83 24v11M28 42h60M32 31h52a7 7 0 0 1 7 7v48a7 7 0 0 1-7 7H32a7 7 0 0 1-7-7V38a7 7 0 0 1 7-7Z" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round"/><circle cx="78" cy="77" r="12" fill="#FBBF24" stroke="#fff" stroke-width="7"/></g>
+      <text x="64" y="78" text-anchor="middle" fill="#475569" font-family="Arial, sans-serif" font-size="11">32 px</text>
+    </g>
+    <g transform="translate(184 296)">
+      <rect width="128" height="92" rx="16" fill="#0F172A"/>
+      <g transform="translate(56 28) scale(.14)"><rect width="116" height="116" rx="30" fill="url(#blue)"/><path d="M33 24v11M83 24v11M28 42h60M32 31h52a7 7 0 0 1 7 7v48a7 7 0 0 1-7 7H32a7 7 0 0 1-7-7V38a7 7 0 0 1 7-7Z" fill="none" stroke="#fff" stroke-width="11" stroke-linecap="round"/><circle cx="78" cy="77" r="12" fill="#FBBF24" stroke="#fff" stroke-width="9"/></g>
+      <text x="64" y="78" text-anchor="middle" fill="#CBD5E1" font-family="Arial, sans-serif" font-size="11">16 px · oscuro</text>
+    </g>
+    <text x="28" y="430" fill="#0F172A" font-family="Inter, Arial, sans-serif" font-size="26" font-weight="700">SmartBooking</text>
+    <text x="28" y="456" fill="#64748B" font-family="Inter, Arial, sans-serif" font-size="13">Agenda clara. Negocio en marcha.</text>
+    <text x="28" y="492" fill="#475569" font-family="Inter, Arial, sans-serif" font-size="12">Directo y reconocible en tamaños pequeños.</text>
+  </g>
+
+  <g transform="translate(430 132)">
+    <rect width="340" height="520" rx="24" fill="#FFFFFF" stroke="#CBD5E1"/>
+    <text x="28" y="44" fill="#0F172A" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="700">02 · Enlace</text>
+    <text x="28" y="70" fill="#64748B" font-family="Inter, Arial, sans-serif" font-size="13">Conecta negocio, agenda y cliente</text>
+    <rect x="28" y="100" width="284" height="170" rx="20" fill="#F8FAFC"/>
+    <g transform="translate(112 123)">
+      <rect width="116" height="116" rx="30" fill="url(#violet)"/>
+      <path d="M32 37h25a15 15 0 0 1 0 30H47M84 79H59a15 15 0 0 1 0-30h10" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round"/>
+      <circle cx="34" cy="37" r="8" fill="#FBBF24"/><circle cx="82" cy="79" r="8" fill="#5EEAD4"/>
+      <path d="M50 57h16" stroke="#fff" stroke-width="6" stroke-linecap="round" opacity=".8"/>
+    </g>
+    <g transform="translate(28 296)">
+      <rect width="128" height="92" rx="16" fill="#F8FAFC" stroke="#E2E8F0"/>
+      <g transform="translate(49 18) scale(.26)"><rect width="116" height="116" rx="30" fill="url(#violet)"/><path d="M32 37h25a15 15 0 0 1 0 30H47M84 79H59a15 15 0 0 1 0-30h10" fill="none" stroke="#fff" stroke-width="10" stroke-linecap="round"/><circle cx="34" cy="37" r="8" fill="#FBBF24"/><circle cx="82" cy="79" r="8" fill="#5EEAD4"/></g>
+      <text x="64" y="78" text-anchor="middle" fill="#475569" font-family="Arial, sans-serif" font-size="11">32 px</text>
+    </g>
+    <g transform="translate(184 296)">
+      <rect width="128" height="92" rx="16" fill="#0F172A"/>
+      <g transform="translate(56 28) scale(.14)"><rect width="116" height="116" rx="30" fill="url(#violet)"/><path d="M32 37h25a15 15 0 0 1 0 30H47M84 79H59a15 15 0 0 1 0-30h10" fill="none" stroke="#fff" stroke-width="15" stroke-linecap="round"/><circle cx="34" cy="37" r="8" fill="#FBBF24"/><circle cx="82" cy="79" r="8" fill="#5EEAD4"/></g>
+      <text x="64" y="78" text-anchor="middle" fill="#CBD5E1" font-family="Arial, sans-serif" font-size="11">16 px · oscuro</text>
+    </g>
+    <text x="28" y="430" fill="#0F172A" font-family="Inter, Arial, sans-serif" font-size="26" font-weight="700">SmartBooking</text>
+    <text x="28" y="456" fill="#64748B" font-family="Inter, Arial, sans-serif" font-size="13">Tu agenda, siempre conectada.</text>
+    <text x="28" y="492" fill="#475569" font-family="Inter, Arial, sans-serif" font-size="12">Evoca colaboración y mensajería.</text>
+  </g>
+
+  <g transform="translate(796 132)">
+    <rect width="340" height="520" rx="24" fill="#FFFFFF" stroke="#CBD5E1"/>
+    <text x="28" y="44" fill="#0F172A" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="700">03 · Ritmo</text>
+    <text x="28" y="70" fill="#64748B" font-family="Inter, Arial, sans-serif" font-size="13">Orden visual y continuidad del día</text>
+    <rect x="28" y="100" width="284" height="170" rx="20" fill="#F8FAFC"/>
+    <g transform="translate(112 123)">
+      <rect width="116" height="116" rx="30" fill="url(#green)"/>
+      <path d="M32 37h30M32 58h49M32 79h30" stroke="#fff" stroke-width="8" stroke-linecap="round"/>
+      <path d="M75 30a15 15 0 1 1 0 30" fill="none" stroke="#FDE68A" stroke-width="7" stroke-linecap="round"/>
+      <circle cx="75" cy="30" r="6" fill="#FDE68A"/>
+    </g>
+    <g transform="translate(28 296)">
+      <rect width="128" height="92" rx="16" fill="#F8FAFC" stroke="#E2E8F0"/>
+      <g transform="translate(49 18) scale(.26)"><rect width="116" height="116" rx="30" fill="url(#green)"/><path d="M32 37h30M32 58h49M32 79h30" stroke="#fff" stroke-width="10" stroke-linecap="round"/><path d="M75 30a15 15 0 1 1 0 30" fill="none" stroke="#FDE68A" stroke-width="8" stroke-linecap="round"/><circle cx="75" cy="30" r="6" fill="#FDE68A"/></g>
+      <text x="64" y="78" text-anchor="middle" fill="#475569" font-family="Arial, sans-serif" font-size="11">32 px</text>
+    </g>
+    <g transform="translate(184 296)">
+      <rect width="128" height="92" rx="16" fill="#0F172A"/>
+      <g transform="translate(56 28) scale(.14)"><rect width="116" height="116" rx="30" fill="url(#green)"/><path d="M32 37h30M32 58h49M32 79h30" stroke="#fff" stroke-width="15" stroke-linecap="round"/><path d="M75 30a15 15 0 1 1 0 30" fill="none" stroke="#FDE68A" stroke-width="11" stroke-linecap="round"/><circle cx="75" cy="30" r="6" fill="#FDE68A"/></g>
+      <text x="64" y="78" text-anchor="middle" fill="#CBD5E1" font-family="Arial, sans-serif" font-size="11">16 px · oscuro</text>
+    </g>
+    <text x="28" y="430" fill="#0F172A" font-family="Inter, Arial, sans-serif" font-size="26" font-weight="700">SmartBooking</text>
+    <text x="28" y="456" fill="#64748B" font-family="Inter, Arial, sans-serif" font-size="13">Más orden para cada jornada.</text>
+    <text x="28" y="492" fill="#475569" font-family="Inter, Arial, sans-serif" font-size="12">Sereno y operativo, con acento verde.</text>
+  </g>
+</svg>

@@ -108,6 +108,10 @@ class Config:
     SMTP_FROM = os.getenv("SMTP_FROM", "noreply@localhost").strip()
     SMTP_USE_TLS = os.getenv("SMTP_USE_TLS", "true").lower() in ("1", "true", "yes")
 
+    # Resend: remitente explícito en un dominio verificado; no se infiere ni se registra el token.
+    RESEND_API_KEY = os.getenv("RESEND_API_KEY", "").strip()
+    RESEND_FROM_EMAIL = os.getenv("RESEND_FROM_EMAIL", "").strip()
+
     # URL del front para enlaces en correos (sin barra final)
     FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "http://localhost:5173").rstrip("/")
 

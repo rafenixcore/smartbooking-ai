@@ -1,0 +1,163 @@
+"""Listado y control de acceso de negocios para la plataforma."""
+
+from datetime import datetime
+from typing import Literal
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
+from sqlalchemy import func, or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.database import get_db
+from app.core.dependencies import get_current_platform_admin
+from app.models import Business, Owner, PlatformAdmin
+from app.services.admin_audit import new_admin_audit_event
+
+router = APIRouter()
+
+
+class PlatformBusinessOut(BaseModel):
+    id: int
+    name: str
+    is_active: bool
+    onboarding_complete: bool
+    owner_id: int | None
+    owner_email: str | None
+    owner_is_active: bool | None
+    created_at: datetime | None
+
+
+class PlatformBusinessListOut(BaseModel):
+    items: list[PlatformBusinessOut]
+    total: int
+    offset: int
+    limit: int
+
+
+def _business_out(business: Business, owner: Owner | None) -> PlatformBusinessOut:
+    return PlatformBusinessOut(
+        id=business.id,
+        name=business.name,
+        is_active=bool(business.is_active),
+        onboarding_complete=business.onboarding_completed_at is not None,
+        owner_id=business.owner_id,
+        owner_email=owner.email if owner else None,
+        owner_is_active=bool(owner.is_active) if owner else None,
+        created_at=business.created_at,
+    )
+
+
+@router.get("", response_model=PlatformBusinessListOut)
+async def list_platform_businesses(
+    status_filter: Literal["active", "suspended"] | None = Query(default=None, alias="status"),
+    q: str | None = Query(default=None, max_length=100),
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=25, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    _admin: PlatformAdmin = Depends(get_current_platform_admin),
+) -> PlatformBusinessListOut:
+    filters = []
+    if status_filter is not None:
+        filters.append(
+            Business.is_active.is_(True)
+            if status_filter == "active"
+            else Business.is_active.is_not(True)
+        )
+    if q and q.strip():
+        escaped = q.strip().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        pattern = f"%{escaped}%"
+        filters.append(
+            or_(
+                Business.name.ilike(pattern, escape="\\"),
+                Owner.email.ilike(pattern, escape="\\"),
+            )
+        )
+
+    total = int(await db.scalar(
+        select(func.count(Business.id))
+        .outerjoin(Owner, Business.owner_id == Owner.id)
+        .where(*filters)
+    ) or 0)
+    rows = await db.execute(
+        select(Business, Owner)
+        .outerjoin(Owner, Business.owner_id == Owner.id)
+        .where(*filters)
+        .order_by(Business.created_at.desc(), Business.id.desc())
+        .offset(offset)
+        .limit(limit)
+    )
+    return PlatformBusinessListOut(
+        items=[_business_out(business, owner) for business, owner in rows.all()],
+        total=total,
+        offset=offset,
+        limit=limit,
+    )
+
+
+@router.get("/{business_id}", response_model=PlatformBusinessOut)
+async def read_platform_business(
+    business_id: int,
+    db: AsyncSession = Depends(get_db),
+    _admin: PlatformAdmin = Depends(get_current_platform_admin),
+) -> PlatformBusinessOut:
+    row = await db.execute(
+        select(Business, Owner)
+        .outerjoin(Owner, Business.owner_id == Owner.id)
+        .where(Business.id == business_id)
+    )
+    business, owner = row.one_or_none() or (None, None)
+    if business is None:
+        raise HTTPException(status_code=404, detail="No se encontró el negocio")
+    return _business_out(business, owner)
+
+
+async def _set_business_active(
+    business_id: int, *, active: bool, db: AsyncSession, admin: PlatformAdmin
+) -> PlatformBusinessOut:
+    business = await db.scalar(
+        select(Business).where(Business.id == business_id).with_for_update()
+    )
+    action = "business.reactivate" if active else "business.suspend"
+    if business is None:
+        db.add(new_admin_audit_event(
+            admin_id=admin.id,
+            action=action,
+            entity_type="business",
+            entity_id=business_id,
+            outcome="not_found",
+        ))
+        await db.commit()
+        raise HTTPException(status_code=404, detail="No se encontró el negocio")
+
+    changed = bool(business.is_active) != active
+    if changed:
+        business.is_active = active
+    db.add(new_admin_audit_event(
+        admin_id=admin.id,
+        action=action,
+        entity_type="business",
+        entity_id=business.id,
+        outcome="success" if changed else "unchanged",
+    ))
+    await db.commit()
+    await db.refresh(business)
+    owner = await db.get(Owner, business.owner_id) if business.owner_id else None
+    return _business_out(business, owner)
+
+
+@router.post("/{business_id}/suspend", response_model=PlatformBusinessOut)
+async def suspend_business(
+    business_id: int,
+    db: AsyncSession = Depends(get_db),
+    admin: PlatformAdmin = Depends(get_current_platform_admin),
+) -> PlatformBusinessOut:
+    return await _set_business_active(business_id, active=False, db=db, admin=admin)
+
+
+@router.post("/{business_id}/reactivate", response_model=PlatformBusinessOut)
+async def reactivate_business(
+    business_id: int,
+    db: AsyncSession = Depends(get_db),
+    admin: PlatformAdmin = Depends(get_current_platform_admin),
+) -> PlatformBusinessOut:
+    return await _set_business_active(business_id, active=True, db=db, admin=admin)

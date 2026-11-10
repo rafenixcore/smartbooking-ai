@@ -4,15 +4,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_owner
+from app.core.dependencies import get_current_owner, require_owned_operational_business
 from app.models import Customer, Business, Owner
 from app.schemas import CustomerCreate, CustomerOut
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_owned_operational_business)])
 
 @router.post("/{business_id}/customers", response_model=CustomerOut, status_code=status.HTTP_201_CREATED)
 async def create_customer(business_id: int, customer_in: CustomerCreate, db: AsyncSession = Depends(get_db)):
-    # Customers can be created publicly or by the business, no owner auth required for creation
+    # La dependencia del router exige dueño y negocio operativo.
     new_customer = Customer(**customer_in.model_dump(), business_id=business_id)
     db.add(new_customer)
     await db.commit()

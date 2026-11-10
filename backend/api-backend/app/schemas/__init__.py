@@ -21,22 +21,15 @@ class OwnerBase(BaseModel):
     email: str
     phone: Optional[str] = None
 
-class OwnerCreate(OwnerBase):
-    password: str
-
 class OwnerOut(OwnerBase):
+    # Los dueños invitados solo definen contraseña; completan el nombre durante
+    # el onboarding inicial del negocio.
+    name: Optional[str] = None
     id: int
     email_verified: bool = False
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
-
-
-class RegisterResult(BaseModel):
-    message: str
-    access_token: Optional[str] = None
-    refresh: Optional[str] = None
-    user: Optional[OwnerOut] = None
 
 
 class VerifyEmailBody(BaseModel):
@@ -55,6 +48,44 @@ class RefreshTokenResponse(BaseModel):
 
 class ResendVerificationBody(BaseModel):
     email: EmailStr
+
+
+class OwnerInvitationCreate(BaseModel):
+    email: EmailStr
+
+
+class OwnerInvitationOut(BaseModel):
+    id: int
+    email: str
+    status: str
+    delivery_status: str
+    expires_at: datetime
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class OwnerInvitationListOut(BaseModel):
+    items: List[OwnerInvitationOut]
+    total: int
+    offset: int
+    limit: int
+
+
+class OwnerInvitationAccept(BaseModel):
+    token: str = Field(min_length=1, max_length=256)
+    password: str = Field(min_length=12, max_length=72)
+
+
+class OwnerInvitationPreviewRequest(BaseModel):
+    token: str = Field(min_length=1, max_length=256)
+
+
+class OwnerInvitationPreviewOut(BaseModel):
+    email: str
+    expires_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
 
 # --- Business Schemas ---
 class BusinessBase(BaseModel):
@@ -104,6 +135,7 @@ class BusinessUpdate(BaseModel):
 class BusinessOut(BusinessBase):
     id: int
     owner_id: int
+    onboarding_completed_at: Optional[datetime] = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

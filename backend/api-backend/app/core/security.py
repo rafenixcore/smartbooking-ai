@@ -4,6 +4,7 @@ from typing import Any, Dict, Optional
 import bcrypt
 import jwt
 import os
+import time
 
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "your-super-secret-key-change-in-production")
 ALGORITHM = "HS256"
@@ -25,6 +26,9 @@ def create_access_token(
 ) -> str:
     to_encode = data.copy()
     to_encode["token_kind"] = token_kind
+    # Precisión suficiente para invalidar JWT emitidos antes de un reset,
+    # incluso si el usuario vuelve a entrar en el mismo segundo.
+    to_encode["iat_ns"] = time.time_ns()
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
     else:

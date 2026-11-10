@@ -39,6 +39,10 @@ async def _get_owned_business(
     business = result.scalars().first()
     if not business:
         raise HTTPException(status_code=404, detail="Business not found or access denied")
+    if not business.is_active:
+        raise HTTPException(status_code=403, detail="El negocio está suspendido")
+    if business.onboarding_completed_at is None:
+        raise HTTPException(status_code=403, detail="Completa el alta del negocio antes de operar")
     return business
 
 

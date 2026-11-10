@@ -10,6 +10,7 @@ from pydantic import ValidationError
 from sqlalchemy.exc import IntegrityError
 
 from app.api.businesses import create_business, get_business, update_business
+from app.models import BusinessMembership
 from app.schemas import BusinessCreate, BusinessOut, BusinessUpdate
 
 
@@ -40,6 +41,10 @@ class _FakeBusiness:
         self.id = 1
         self.owner_id = _FakeOwner.id
         self.created_at = datetime(2026, 1, 1)
+        self.name = "Negocio existente"
+        self.phone_number = "8095551111"
+        self.is_active = True
+        self.onboarding_completed_at = datetime(2026, 1, 1)
         for key, value in kwargs.items():
             setattr(self, key, value)
 
@@ -51,13 +56,16 @@ class _FakeDb:
         self.business = business
         self.commit_error = commit_error
         self.committed = False
-        self.added = None
+        self.added = []
 
     async def execute(self, *_args, **_kwargs):
         return _ExecuteResult(self.business)
 
     def add(self, item):
-        self.added = item
+        self.added.append(item)
+
+    async def flush(self):
+        self.added[0].id = 99
 
     async def commit(self):
         if self.commit_error:
@@ -107,8 +115,12 @@ async def test_create_business_persists_whatsapp_fields():
         current_owner=_FakeOwner(),
     )
 
-    assert db.added.whatsapp_phone_number_id == "WBID_002"
-    assert db.added.waba_id == "WABA_002"
+    assert db.added[0].whatsapp_phone_number_id == "WBID_002"
+    assert db.added[0].waba_id == "WABA_002"
+    assert isinstance(db.added[1], BusinessMembership)
+    assert db.added[1].business_id == db.added[0].id
+    assert db.added[1].user_id == _FakeOwner.id
+    assert db.added[1].role == "owner"
 
 
 @pytest.mark.asyncio

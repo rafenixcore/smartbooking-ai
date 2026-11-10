@@ -41,9 +41,16 @@
   --color-input: hsl(214.3 31.8% 91.4%);
   --color-ring: hsl(217.2 91.2% 59.8%);
 
+  /* Identidad provisional del producto, pendiente de selección del logo. */
+  --color-brand-ink: #0f172a;
+  --color-brand-teal: #0f766e;
+  --color-brand-cyan: #0ea5a4;
+  --color-brand-amber: #f59e0b;
+
   --radius-lg: 0.5rem;
   --radius-md: calc(0.5rem - 2px);
   --radius-sm: calc(0.5rem - 4px);
+  --radius-control: 0.625rem;
   
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
   

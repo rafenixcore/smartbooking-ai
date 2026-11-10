@@ -7,10 +7,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_owner
+from app.core.dependencies import get_current_owner, require_owned_operational_business
 from app.models import Appointment, Business, Owner, Service
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_owned_operational_business)])
 
 
 def _to_utc(dt: datetime) -> datetime:

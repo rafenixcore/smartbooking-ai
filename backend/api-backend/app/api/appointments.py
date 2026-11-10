@@ -6,12 +6,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_owner
+from app.core.dependencies import get_current_owner, require_owned_operational_business
 from app.models import Appointment, Business, Owner, Service
 from app.schemas import AppointmentCreate, AppointmentOut, AvailabilityResponse, AvailableSlot
 from app.services.db_service import get_availability
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_owned_operational_business)])
 
 
 def _normalize_status(value: str) -> str:
@@ -39,7 +39,7 @@ def _parse_datetime(value: str | None) -> datetime | None:
 
 @router.post("/{business_id}/appointments", response_model=AppointmentOut, status_code=status.HTTP_201_CREATED)
 async def create_appointment(business_id: int, appointment_in: AppointmentCreate, db: AsyncSession = Depends(get_db)):
-    # Anyone can create an appointment
+    # La dependencia del router exige dueño y negocio operativo.
     new_appointment = Appointment(**appointment_in.model_dump(), business_id=business_id)
     db.add(new_appointment)
     await db.commit()

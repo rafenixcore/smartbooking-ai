@@ -17,7 +17,13 @@ def allow_channel_idempotency(monkeypatch):
     async def fake_owner_binding(_telegram_user_id):
         return None
 
+    async def send_without_ledger(_business_id, operation):
+        # Estos casos verifican ruteo del webhook sin BD; la persistencia real
+        # queda cubierta por test_message_ledger.py con PostgreSQL local.
+        return await operation
+
     monkeypatch.setattr(main, "should_process_channel_event", fake_should_process)
+    monkeypatch.setattr(main, "_send_whatsapp_and_record", send_without_ledger)
     monkeypatch.setattr(
         telegram_inbound,
         "should_process_channel_event",
