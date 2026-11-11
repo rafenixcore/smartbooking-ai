@@ -124,6 +124,16 @@ Estados: `PENDIENTE` · `EN CURSO` · `HECHO` · `DIFERIDO` · `DESCARTADO`
 
 <!-- Nuevas entradas arriba. Formato: fecha — título, luego qué/dónde/por qué/verificación -->
 
+### 2026-11-11 — Corrección del deploy git: API de credenciales WhatsApp
+
+**Qué:** el detalle `/admin/businesses/:id` mostró “No se pudo encontrar este negocio o no tienes acceso a sus datos.” El frontend desplegado desde `main` no definía `platformAPI.getWhatsAppConfig` ni `updateWhatsAppConfig`: esas modificaciones existían en el working tree pero no en git. El deploy anterior se había hecho desde el working tree, así que producción sí las tenía. Se commiteó el runtime pendiente —cliente y tipos de plataforma, modelos/esquemas, guards de Telegram y textos/UI de la fase 008/009— y se redeployó.
+
+**Dónde:** `frontend/src/services/api.ts`, `frontend/src/types/platform.ts` y los demás archivos runtime del commit `739b60a`; entrada anterior del 2026-11-11.
+
+**Por qué:** `vite build` no verifica tipos, así que la página compiló con llamadas a métodos inexistentes y falló en runtime con el mensaje genérico de acceso. El build git no reproducía el estado que se había desplegado desde el working tree.
+
+**Verificación:** commit `739b60a`; Railway `1b42a0dc-6633-41e3-8375-134a777c4740` **SUCCESS**; Vercel `dpl_5LLP5CSUHyXrT2aD4QuL6tEvwYun` **READY** con alias `smartbooking.rafenixcore.com`; el bundle `index-1794437444428.js` contiene `getWhatsAppConfig` y `updateWhatsAppConfig`; `GET /openapi.json` lista `/api/platform/businesses/{business_id}/whatsapp` con GET/PUT; la ruta sin autenticación responde **401** (existe y exige sesión); `/admin` y `/` responden **200**. No se modificaron datos.
+
 ### 2026-11-11 — UX del formulario de credenciales WhatsApp en `/admin`
 
 **Qué:** se corrigió el formulario de credenciales del detalle de negocio: el botón pasó de “Guardar WhatsApp” a **“Guardar credenciales”** y queda deshabilitado mientras no haya cambios; se valida en cliente y servidor que Phone Number ID y WABA ID sean numéricos, de **5 a 64 dígitos** y se envíen juntos; se distinguen mensajes para campos incompletos, formato inválido, longitud y Phone Number ID ya vinculado; el frontend ahora muestra el detalle del 422 del backend en lugar de un mensaje genérico de “otro negocio”; vaciar ambos campos pide **confirmación explícita** antes de quitar el canal. El estado “IDs guardados” pasó a **“Credenciales guardadas”**.
