@@ -4,6 +4,8 @@
 **debe quedar anotado aquí**. Es el punto de verdad para que otra sesión (humano o
 agente) sepa qué se hizo, qué falta y por qué.
 
+> Este registro conserva decisiones y ejemplos de etapas anteriores. Las menciones sectoriales en entradas históricas no describen el alcance actual del producto.
+
 ## Convención (obligatoria)
 
 1. **Antes de empezar** una tarea: búscala en la sección *Backlog*. Si existe, cambia su estado.
@@ -71,6 +73,9 @@ Estados: `PENDIENTE` · `EN CURSO` · `HECHO` · `DIFERIDO` · `DESCARTADO`
 | 15 | Recordatorios y configuración guiada de WhatsApp | **DIFERIDO** (2026-11-09) | Se conserva para una fase posterior: recordatorio único a 24 horas, alta/estado guiado del canal y explicación de tarifas al dueño. La contabilidad de mensajes necesaria para métricas de administración se planificó en #16. |
 | 16 | UI, acceso por invitación, recuperación y administración de plataforma | **EN CURSO** (2026-11-10) | Neon migrado a `c8e3d4f5a601` con respaldo restaurado. Railway/Vercel desplegados; rutas, CORS y API verificados. Primera cuenta administradora creada, recuperación entregada y consumida; usuario confirmó acceso al panel y Neon registra una sesión activa. T017 cerrada con prueba local de expiración; T033 aún requiere recorrido de invitación/alta y métricas con datos de prueba identificados. |
 | 18 | Corregir hallazgos de seguridad y consistencia de T035 | **HECHO** (2026-11-09) | R1–R6 corregidos y probados localmente tras autorización explícita del usuario. Límite `/admin` confirmado: 5 fallos/correo y 20/IP por hora. Nuevas migraciones `b7c2f3e4d590` y `c8e3d4f5a601`; ver `specs/007-platform-admin-access-ui/security-review.md`. Producción no modificada. |
+| 20 | Generalizar producto para negocios que trabajan con citas | **EN CURSO** (2026-11-10) | Se reemplazaron las referencias de tijeras en UI y mensajes runtime, y se hizo genérico el ejemplo del prompt y de arquitectura. Sigue pendiente comprobar si el negocio demo sectorial anotado en este WORKLOG continúa en producción y decidir su tratamiento. |
+| 21 | WhatsApp multi-negocio desde `/admin` y pausa temporal de Telegram | **HECHO** (2026-11-10) | Backend Railway `8bf3b5cb-955d-4b85-aee8-aab66b1acd24` y frontend Vercel `dpl_6XEKqWdQknRUYSoGaxjLLGPhrXRy` publicados; migración `d9f0a1b2c3d4` aplicada y `/admin` HTTP 200. `TELEGRAM_ENABLED=false` configurado. Método de pago excluido. |
+| 22 | Corregir UX del formulario de credenciales WhatsApp en `/admin` | **HECHO** (2026-11-11) | Botón “Guardar credenciales” deshabilitado sin cambios; validación numérica 5–64 en cliente y servidor; mensajes distintos para campos incompletos, formato y conflicto; el 422 del backend ya se muestra en la UI; vaciar ambos pide confirmación. Ver entrada del 2026-11-11. |
 
 **Recomendaciones diferidas para #15 (no son comportamiento actual):**
 
@@ -118,6 +123,136 @@ Estados: `PENDIENTE` · `EN CURSO` · `HECHO` · `DIFERIDO` · `DESCARTADO`
 ## Registro de cambios
 
 <!-- Nuevas entradas arriba. Formato: fecha — título, luego qué/dónde/por qué/verificación -->
+
+### 2026-11-11 — UX del formulario de credenciales WhatsApp en `/admin`
+
+**Qué:** se corrigió el formulario de credenciales del detalle de negocio: el botón pasó de “Guardar WhatsApp” a **“Guardar credenciales”** y queda deshabilitado mientras no haya cambios; se valida en cliente y servidor que Phone Number ID y WABA ID sean numéricos, de **5 a 64 dígitos** y se envíen juntos; se distinguen mensajes para campos incompletos, formato inválido, longitud y Phone Number ID ya vinculado; el frontend ahora muestra el detalle del 422 del backend en lugar de un mensaje genérico de “otro negocio”; vaciar ambos campos pide **confirmación explícita** antes de quitar el canal. El estado “IDs guardados” pasó a **“Credenciales guardadas”**.
+
+**Dónde:** `frontend/src/pages/platform/AdminBusinessDetail.tsx`, `frontend/src/pages/platform/AdminPages.test.tsx`, `backend/api-backend/app/api/platform_businesses.py`, `backend/api-backend/tests/test_platform_whatsapp_config.py`, `backend/api-backend/tests/test_platform_businesses.py`, `specs/009-whatsapp-platform-admin/{spec,plan,tasks}.md`.
+
+**Por qué:** en producción, los `PUT /api/platform/businesses/5/whatsapp` del 2026-11-11 21:54 UTC devolvieron **422** porque se envió solo Phone Number ID sin WABA ID. El frontend mostraba para cualquier error “revisa que el Phone Number ID no esté asignado a otro negocio”, lo que hacía parecer un conflicto de tenant. La auditoría no registró ningún `outcome=conflict`. No se modificó producción.
+
+**Verificación:** `backend/api-backend/.venv/bin/pytest -q tests/test_platform_whatsapp_config.py tests/test_platform_businesses.py tests/test_business_whatsapp_fields.py` → **9 passed, 6 skipped**; Vitest `frontend/src/pages/platform/AdminPages.test.tsx` → **11/11**; `npm run build` → exitoso; `git diff --check` → limpio. Evidencia productiva: Railway HTTP `PUT /api/platform/businesses/4/whatsapp 200` (21:53:29 UTC) y `PUT /api/platform/businesses/5/whatsapp 422` (21:54:04 y 21:54:54 UTC); Neon `admin_audit_events` solo muestra `business.whatsapp.configure` con `outcome=success` para el negocio 4. Nota: el negocio 2 conserva `WBID_TEST_001` (valor de seed no numérico); el formulario exigirá corregirlo o vaciarlo antes de guardar. No se desplegó ni se cambiaron datos.
+
+### 2026-11-10 — Verificación de Meta: negocio personal y límite de números
+
+**Qué:** se consultó vía MCP de Meta WhatsApp Business el negocio «Hendrick Anthony Rafael Cedano» (`585191349945054`). Resultado: **no verificado**. Tiene una cuenta de WhatsApp («Turnos Médicos») con **1 número** `+1 809-243-8778` en estado `linked` / `registered`, listo para enviar. También se confirmó el límite vigente de Meta: **2 números registrados por portafolio sin verificación**, ampliable a **20** al verificar el negocio o alcanzar un límite de mensajería de 2.000.
+
+**Dónde:** consulta externa a Meta; sin cambios en código ni infraestructura.
+
+**Por qué:** responder la solicitud del usuario sobre el estado de verificación y la capacidad de números de este negocio.
+
+**Verificación:** `whatsapp_biz_verify_business` devolvió `is_verified: false` con enlace a Security Center; `whatsapp_biz_phone_numbers` devolvió 1 número `linked`/`registered`. Límite según documentación oficial de Meta (phone numbers). No se modificó nada en Meta.
+
+### 2026-11-10 — WhatsApp multi-negocio desde `/admin` y Telegram pausado
+
+**Qué:** se movió la asignación de `Phone Number ID` y `WABA ID` al panel de plataforma; WABA puede compartirse entre negocios y el Phone Number ID continúa siendo único. El API de dueño dejó de aceptar/serializar esos IDs. Se agregó la migración `d9f0a1b2c3d4`, endpoints protegidos y auditados, y una sección de configuración en `/admin`. Telegram queda apagado por defecto (`TELEGRAM_ENABLED=false`), bloqueado en webhook/rutas de activación y recordatorios, retirado de la navegación y protegido contra registro accidental de webhook desde scripts de desarrollo. Se mantuvieron los datos y adaptadores existentes. No se tocó el método de pago ni se hicieron cambios en Meta.
+
+**Dónde:** backend `app/api/platform_businesses.py`, `app/api/businesses.py`, `app/config.py`, `app/services/background_tasks.py`, `main.py`, modelos/esquemas y migración; UI `AdminBusinessDetail.tsx`, `BusinessSettings.tsx`, `Sidebar.tsx`, `Dashboard.tsx`, `App.tsx`, servicios/types; `.env.example`, scripts, README, baseline, constitución y `specs/009-whatsapp-platform-admin/`.
+
+**Por qué:** centralizar en el superadmin los identificadores por negocio y que cada Phone Number ID enrute al tenant correcto, mientras el producto opera solo por WhatsApp en esta fase.
+
+**Verificación:** backend enfocado 43/43; frontend Vitest 10/10; Vite build local y remoto exitosos; lint con 0 errores y 20 warnings; `compileall`, `alembic heads` (`d9f0a1b2c3d4`), validación bash y prueba del guard de Telegram exitosos. Railway deployment `8bf3b5cb-955d-4b85-aee8-aab66b1acd24` quedó `SUCCESS`; sus logs confirman `c8e3d4f5a601 -> d9f0a1b2c3d4` y arranque de Uvicorn. Vercel deployment `dpl_6XEKqWdQknRUYSoGaxjLLGPhrXRy` quedó `READY`, alias `smartbooking.rafenixcore.com`; lectura de `/admin` devolvió HTTP 200. `TELEGRAM_ENABLED=false` quedó guardado en Railway sin redeploy intermedio. `git diff --check` limpio. Los tests de integración que requieren `TEST_DATABASE_URL` no se pudieron ejecutar porque la variable no está configurada. No se hizo configuración en Meta ni se tocó el método de pago.
+
+### 2026-11-10 — Análisis del alta de WhatsApp por negocio
+
+**Qué:** se comparó el flujo implementado, la propuesta de varios números en el WABA de Rafenixcore y el modelo de incorporación de clientes mediante Embedded Signup; se registró la decisión pendiente en #21. No se cambió código ni infraestructura.
+
+**Dónde:** `docs/WORKLOG.md`; revisión de `backend/api-backend/app/models.py`, `main.py`, `app/config.py`, `app/services/whatsapp_client.py` y `frontend/src/pages/BusinessSettings.tsx`.
+
+**Por qué:** aclarar cómo se identifica cada negocio, quién configura el canal y qué impide hoy compartir un WABA entre negocios.
+
+**Verificación:** lectura del código y documentación oficial de Meta sobre Tech Providers, Embedded Signup y registro/verificación de números; no se hizo prueba en Meta ni intercambio real de mensajes. El estado productivo sigue abierto en #3.
+
+### 2026-11-10 — 008 corrección de referencias sectoriales en UI y mensajes
+
+**Qué:** reemplazo de iconos `Scissors` por `ClipboardList` en Sidebar, Dashboard, Services y Appointments; sustitución de nueve emojis `✂️` por `📋` en mensajes de reserva, consulta, cambio, cancelación y recordatorio; eliminación de “Corte de Cabello” del ejemplo genérico del system prompt y de la muestra de arquitectura. Se añadió una prueba para que el ejemplo del prompt no vuelva a asumir un sector. WORKLOG documenta además un negocio demo de producción llamado Barbería Rafenix con servicios de corte/barba; no se consultó ni modificó la base de datos.
+
+**Dónde:** `frontend/src/components/Sidebar.tsx`, `frontend/src/pages/Dashboard.tsx`, `frontend/src/pages/Services.tsx`, `frontend/src/pages/Appointments.tsx`; mensajes en `backend/api-backend/app/handlers/` y `app/services/`; `backend/api-backend/app/prompts/system_prompt.py`, `docs/ARCHITECTURE.md` y `backend/api-backend/tests/test_system_prompt.py`.
+
+**Por qué:** retirar señales visuales y textuales de barbería para que la interfaz y el asistente funcionen para negocios de cualquier sector que trabaje con citas.
+
+**Verificación:** prueba nueva del prompt falló antes del cambio y pasó después (`.venv/bin/pytest -q tests/test_system_prompt.py`, 1/1); frontend Vitest 49/49; `npm run build` exitoso; búsqueda `rg` confirmó que no quedan `✂`, `Scissors` ni “Corte de Cabello” en UI, backend runtime y muestra de arquitectura. Producción: Vercel deployment `dpl_FX3rL8WEQisuBj4E4imynPs3kJJW` (`READY`, alias `smartbooking.rafenixcore.com`, HTTP 200); Railway deployment `8c87866e-ff6d-4d4a-b60f-ec4f49517302` (`SUCCESS`, `/docs` HTTP 200). Los logs de arranque no muestran migración nueva. El build mostró el aviso existente de `caniuse-lite` desactualizado. No se consultó Neon ni se modificaron datos productivos.
+
+### 2026-11-10 — 008 producción publicada y verificada
+
+**Qué:** tras la autorización del usuario para el efecto de arranque de Railway, se desplegó la feature generalizada en backend y UI. Se usó el root del repositorio para Railway; Vercel recibió un staging temporal con solo el directorio del frontend, sin `.env`, backend, `node_modules` ni artefactos. Se reutilizó la sesión guardada de Vercel al retirar de la invocación el token de entorno inválido. No se ejecutó ninguna migración nueva según los logs de arranque.
+
+**Dónde:** Railway servicio `4cb7dbe4-5695-44a9-bfef-3dfd39c090dc`, producción, deployment `574e9e20-850b-4222-adb0-5cd29533e64a` (`SUCCESS`); Vercel proyecto `prj_dkWTfgeRvTm8pfEh7IEJ8TiSesGa`, deployment `dpl_D6KUe9ctiUhVXUk4dUPv3ejaFcWm` (`READY`), dominio `smartbooking.rafenixcore.com`.
+
+**Por qué:** poner en producción la presentación general de SmartBooking y retirar la clasificación sectorial visible/default para nuevos perfiles, conservando compatibilidad y el esquema existente.
+
+**Verificación:** Railway informó `SUCCESS`; logs de arranque muestran `alembic` conectado y la app iniciada, sin líneas `Running upgrade`; Vercel informó `READY` y aliasó el dominio productivo. `curl` de solo lectura → UI HTTP 200 y backend `/docs` HTTP 200. Las pruebas de implementación están registradas en la entrada T013–T016 (backend 33/33, Vitest 3/3, build, lint y diff aprobados). El deployment procede del worktree local; no hay commit de Git asociado (`commit hash -`). No se alteró el cron.
+
+### 2026-11-10 — 008 T013–T016: costos Meta y revisión final
+
+**Qué:** se agregó una regresión de costos que combina `MessageEvent.category="utility"` con `Business.category="legacy-sector"` y verifica que el cálculo use la tarifa del evento. Se confirmó que `Business.category` sigue nullable y sin default, no se añadió migración y las menciones activas restantes son valores legacy de dos pruebas de compatibilidad. T013–T016 están completas. No se consultó ni modificó Neon.
+
+**Dónde:** `backend/api-backend/tests/test_message_costs.py`, `tests/test_business_mvp_limit.py`, `specs/008-general-purpose-appointments/tasks.md`, `specs/008-general-purpose-appointments/plan.md` y este backlog.
+
+**Por qué:** conservar la separación entre rubro comercial y tarifa de WhatsApp, y cerrar la generalización sin alterar valores existentes ni el esquema productivo.
+
+**Verificación:** backend enfocado con PostgreSQL temporal desechable → 33/33; Vitest de DashboardLayout y BusinessSettings → 3/3; build aprobado; ESLint → 0 errores y 20 warnings; `git diff --check` aprobado. Playwright no pudo abrir el servidor local por `listen EPERM`. La base temporal se retiró; no se consultó ni modificó Neon y no hubo cambios en servicios o producción durante la implementación.
+
+### 2026-11-10 — 008 despliegue productivo: bloqueado antes de publicar (resuelto en la entrada superior)
+
+**Qué:** se intentó desplegar el backend 008 en Railway y la UI en Vercel, según autorización del usuario. El primer paquete de Railway usó la subcarpeta backend; Railway reportó que no encontró `/backend/api-backend` dentro del snapshot y esa ejecución falló sin completar despliegue. Al preparar el segundo envío desde la raíz, el auto-review lo rechazó porque `backend/api-backend/Dockerfile` ejecuta `alembic upgrade head` al iniciar y eso puede mutar la base de producción. Vercel CLI con el proyecto enlazado devolvió que el token configurado no es válido; no se creó deployment.
+
+**Dónde:** Railway proyecto `a7faa948-1b61-46e0-a0e4-001d68621971`, servicio `4cb7dbe4-5695-44a9-bfef-3dfd39c090dc`, entorno production; Vercel proyecto `prj_dkWTfgeRvTm8pfEh7IEJ8TiSesGa`. Deployment Railway fallido `023bc051-6b4a-4b35-9aaa-3c3246a14a23`.
+
+**Por qué:** el usuario autorizó el despliegue general; el backend tiene un efecto de base de datos en su comando de arranque que el control de aprobación requiere autorizar explícitamente. El proyecto Vercel carece de credenciales CLI válidas en este entorno.
+
+**Verificación:** se inspeccionaron la configuración del servicio, logs del deployment fallido, Dockerfile, el proyecto Vercel y la respuesta de la CLI. En ese momento no se aplicaron migraciones ni hubo deployment exitoso. El usuario autorizó después el efecto de arranque de Railway y se completó el despliegue; ver la entrada superior. Vercel se publicó con la sesión guardada y un staging limitado al frontend.
+
+### 2026-11-10 — 008 T009–T012: documentos y ejemplos neutrales
+
+**Qué:** se generalizó la presentación del producto en README, estado del proyecto, baseline y quickstarts. `PROYECTO_STATUS.md` quedó señalado como fotografía histórica. Los seeds y fixtures arbitrarios usan nombres y servicios neutrales; el seed específico se renombró `seed_sample_business.py`. La demo visual ya no muestra “Professional Barber”; `/test-ui` continúa disponible solo en desarrollo. WORKLOG y diagrama archivado conservan su contenido histórico, con notas visibles para evitar confundirlos con la definición vigente.
+
+**Dónde:** `README.md`, `PROYECTO_STATUS.md`, `specs/000-project-baseline/`, `specs/002-owner-command-channel/quickstart.md`, `specs/006-service-buffer-engine/spec.md`, `backend/api-backend/seed.py`, `backend/api-backend/tools/seed_sample_business.py`, fixtures backend/frontend, `frontend/src/pages/TestUI.tsx`, `docs/WORKLOG.md` y `docs/archive/DEMO_FLOW_DIAGRAM.md`.
+
+**Por qué:** comunicar que el producto atiende negocios que trabajan con citas sin borrar los datos históricos ni los casos de prueba que verifican compatibilidad de categorías antiguas.
+
+**Verificación:** pruebas backend enfocadas → 142/142; Vitest de `DashboardLayout` y `BusinessSettings` → 3/3; `npm run build` aprobado; la ruta `/test-ui` sigue bajo `import.meta.env.DEV`; búsqueda de términos sectoriales en documentos y código activos dejó solo valores legacy de compatibilidad en pruebas. `git diff --check` se ejecutó al cerrar. Playwright para `e2e/login.spec.ts` no inició: el entorno denegó abrir el puerto local (`listen EPERM`); no fue posible ejecutar ese E2E. No se ejecutó el seed ni se alteraron bases de datos o producción.
+
+### 2026-11-10 — 008 T005–T008: perfil neutral sin categoría comercial
+
+**Qué:** se eliminó el default `barbershop` de `Business.category` en ORM/Pydantic; la categoría ahora queda nula si no llega. Se quitó el selector y envío de categoría desde Configuración, se hizo opcional el tipo frontend y se eliminó el fallback del mapper. El onboarding ahora usa ejemplos neutrales. Se preserva la categoría de tarifa de Meta y no se creó migración.
+
+**Dónde:** `backend/api-backend/app/models.py`, `app/schemas/__init__.py`; `frontend/src/pages/BusinessSettings.tsx`, `BusinessOnboarding.tsx`, `BusinessSettings.test.tsx`, `frontend/src/types/index.ts`, `frontend/src/services/api.ts`; tareas T005–T008.
+
+**Por qué:** evitar que el producto clasifique por defecto a cada negocio como barbería cuando el campo no activa funcionalidad.
+
+**Verificación:** backend enfocado 13/13; Vitest de Configuración 2/2; build frontend aprobado; ESLint terminó sin errores y con 20 warnings; búsqueda confirmó que las menciones en fixtures actuales son de categoría legacy pendiente de T010. `git diff --check` aprobado. No se ejecutaron migraciones ni se cambió producción.
+
+### 2026-11-10 — 008 T001–T004: inventario y pruebas RED
+
+**Qué:** se clasificaron las menciones de barbería: UI/defaults en `BusinessSettings`, onboarding y `Business` schema/model; documentación vigente en README/estado/baseline; ejemplos en seeds y pruebas; y referencias históricas en WORKLOG/archivo. `TestUI` solo tiene ruta de desarrollo. Se confirmó que `Business.category` no habilita reglas de citas, mientras `MessageEvent.category` alimenta el precio de WhatsApp. Se agregaron regresiones de esquema y UI antes de implementar el cambio; T001–T004 están completos.
+
+**Dónde:** `specs/008-general-purpose-appointments/tasks.md`, `research.md`, `backend/api-backend/tests/test_business_mvp_limit.py`, `frontend/src/pages/BusinessSettings.test.tsx` y este backlog. Los cuatro negocios productivos siguen intactos; no se consultaron ni modificaron registros nuevos en esta tanda.
+
+**Por qué:** iniciar el cambio aprobado sin confundir el campo comercial sin uso con la categoría tarifaria necesaria para el ledger, y demostrar con pruebas el comportamiento actual antes de corregirlo.
+
+**Verificación:** backend `.venv/bin/pytest -q tests/test_business_mvp_limit.py tests/test_business_whatsapp_fields.py` → 2 fallos esperados por default `barbershop`, 11 aprobadas, incluida preservación de categoría legado; frontend `npm test -- src/pages/BusinessSettings.test.tsx` → 2 fallos esperados (selector presente y categoría enviada). El comando global `pytest` no estaba en PATH; se usó el entorno del backend. No se ejecutaron pruebas de implementación verde porque el próximo bloque contiene T005–T008. `git diff --check` aprobado.
+
+### 2026-11-10 — Tareas de implementación para la propuesta 008
+
+**Qué:** se generó un desglose de 16 tareas secuenciales por preparación, base compartida, tres historias de usuario y cierre. Cada tarea incluye ruta y verificación; se identificaron oportunidades paralelas entre pruebas/UI, textos/docs y regresiones de costos. No se modificó código.
+
+**Dónde:** `specs/008-general-purpose-appointments/tasks.md` y estado del backlog #20 en este archivo.
+
+**Por qué:** convertir el plan solicitado en tareas concretas para revisión, conservando la distinción entre clasificación comercial del negocio y categoría de tarifa Meta.
+
+**Verificación:** prerrequisitos Spec Kit resolvieron al directorio 008 y listaron sus documentos; las 16 casillas tienen IDs secuenciales y formato correcto; `git diff --check` aprobado. No se ejecutaron pruebas de producto porque no hubo cambios de código.
+
+### 2026-11-10 — Plan 008 para negocios que trabajan con citas
+
+**Qué:** se preparó la especificación y el plan para generalizar la presentación de SmartBooking y retirar la categoría comercial del onboarding/configuración. La recomendación es mantener el atributo `Business.category` nullable y compatible, quitar el default `barbershop`, no migrar ni borrar valores históricos y preservar `MessageEvent.category` para costos Meta. No se implementó código ni se tocaron datos de producción.
+
+**Dónde:** `specs/008-general-purpose-appointments/{spec.md,plan.md,research.md,data-model.md,quickstart.md}`, bloque Spec Kit en `AGENTS.md` y backlog #20.
+
+**Por qué:** el usuario indicó que el producto debe atender a cualquier negocio que trabaje con citas y que la categoría actual no aporta valor operativo.
+
+**Verificación:** lectura estática de usos de categoría en backend/frontend y búsqueda `rg` de referencias sectoriales; se verificó que `TestUI` solo tiene ruta de desarrollo y que la categoría de mensajes sí participa en `message_costs.py`. No se ejecutaron tests porque no hubo cambios de código.
 
 ### 2026-11-10 — Acceso administrativo verificado e inventario de datos de prueba
 

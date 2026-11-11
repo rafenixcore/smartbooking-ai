@@ -1,15 +1,18 @@
 """Listado y control de acceso de negocios para la plataforma."""
 
+import re
 from datetime import datetime
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator, model_validator
 from sqlalchemy import func, or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_platform_admin
+from app.config import config
 from app.models import Business, Owner, PlatformAdmin
 from app.services.admin_audit import new_admin_audit_event
 
@@ -32,6 +35,139 @@ class PlatformBusinessListOut(BaseModel):
     total: int
     offset: int
     limit: int
+
+
+class PlatformWhatsAppConfigUpdate(BaseModel):
+    whatsapp_phone_number_id: str | None = Field(default=None)
+    waba_id: str | None = Field(default=None)
+
+    model_config = ConfigDict(extra="forbid")
+
+    @field_validator("whatsapp_phone_number_id", "waba_id")
+    @classmethod
+    def clean_identifier(cls, value: str | None, info: ValidationInfo) -> str | None:
+        if value is None:
+            return None
+        cleaned = str(value).strip()
+        if not cleaned:
+            return None
+        label = (
+            "Phone Number ID"
+            if info.field_name == "whatsapp_phone_number_id"
+            else "WABA ID"
+        )
+        if re.fullmatch(r"[0-9]+", cleaned) is None:
+            raise ValueError(f"El {label} debe contener solo números.")
+        if not 5 <= len(cleaned) <= 64:
+            raise ValueError(f"El {label} debe tener entre 5 y 64 dígitos.")
+        return cleaned
+
+    @model_validator(mode="after")
+    def identifiers_are_paired(self):
+        if bool(self.whatsapp_phone_number_id) != bool(self.waba_id):
+            raise ValueError(
+                "Completa el Phone Number ID y el WABA ID, o deja ambos vacíos "
+                "para quitar la configuración."
+            )
+        return self
+
+
+class PlatformWhatsAppConfigOut(BaseModel):
+    business_id: int
+    whatsapp_phone_number_id: str | None
+    waba_id: str | None
+    credentials_configured: bool
+    status: Literal["unconfigured", "ids_saved"]
+
+
+def _whatsapp_config_out(business: Business) -> PlatformWhatsAppConfigOut:
+    phone_id = business.whatsapp_phone_number_id
+    waba_id = business.waba_id
+    return PlatformWhatsAppConfigOut(
+        business_id=business.id,
+        whatsapp_phone_number_id=phone_id,
+        waba_id=waba_id,
+        credentials_configured=bool(
+            config.META_WABA_TOKEN and config.META_APP_SECRET and config.META_VERIFY_TOKEN
+        ),
+        status="ids_saved" if phone_id and waba_id else "unconfigured",
+    )
+
+
+@router.get("/{business_id}/whatsapp", response_model=PlatformWhatsAppConfigOut)
+async def read_platform_whatsapp_config(
+    business_id: int,
+    db: AsyncSession = Depends(get_db),
+    _admin: PlatformAdmin = Depends(get_current_platform_admin),
+) -> PlatformWhatsAppConfigOut:
+    business = await db.scalar(select(Business).where(Business.id == business_id))
+    if business is None:
+        raise HTTPException(status_code=404, detail="No se encontró el negocio")
+    return _whatsapp_config_out(business)
+
+
+@router.put("/{business_id}/whatsapp", response_model=PlatformWhatsAppConfigOut)
+async def update_platform_whatsapp_config(
+    business_id: int,
+    payload: PlatformWhatsAppConfigUpdate,
+    db: AsyncSession = Depends(get_db),
+    admin: PlatformAdmin = Depends(get_current_platform_admin),
+) -> PlatformWhatsAppConfigOut:
+    business = await db.scalar(
+        select(Business).where(Business.id == business_id).with_for_update()
+    )
+    if business is None:
+        db.add(new_admin_audit_event(
+            admin_id=admin.id,
+            action="business.whatsapp.configure",
+            entity_type="business",
+            entity_id=business_id,
+            outcome="not_found",
+        ))
+        await db.commit()
+        raise HTTPException(status_code=404, detail="No se encontró el negocio")
+
+    phone_id = payload.whatsapp_phone_number_id
+    if phone_id:
+        duplicate = await db.scalar(
+            select(Business.id).where(
+                Business.whatsapp_phone_number_id == phone_id,
+                Business.id != business_id,
+            )
+        )
+        if duplicate is not None:
+            db.add(new_admin_audit_event(
+                admin_id=admin.id,
+                action="business.whatsapp.configure",
+                entity_type="business",
+                entity_id=business_id,
+                outcome="conflict",
+            ))
+            await db.commit()
+            raise HTTPException(
+                status_code=409,
+                detail="Ese Phone Number ID ya está vinculado a otro negocio",
+            )
+
+    business.whatsapp_phone_number_id = phone_id
+    business.waba_id = payload.waba_id
+    db.add(new_admin_audit_event(
+        admin_id=admin.id,
+        action="business.whatsapp.configure",
+        entity_type="business",
+        entity_id=business_id,
+        outcome="success",
+    ))
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="Ese Phone Number ID ya está vinculado a otro negocio",
+        ) from None
+    await db.refresh(business)
+    return _whatsapp_config_out(business)
 
 
 def _business_out(business: Business, owner: Owner | None) -> PlatformBusinessOut:

@@ -296,3 +296,38 @@ async def test_repeated_suspend_is_idempotent_and_audited(api):
         ).all()
         assert business.is_active is False
         assert [event.outcome for event in events] == ["success", "unchanged"]
+
+
+@pytest.mark.asyncio
+async def test_platform_admin_can_assign_shared_waba_to_distinct_business_numbers(api):
+    client, factory = api
+    first_business_id, owner_headers, admin_id = await seed_business_and_principals(factory)
+    second_business_id, _, _ = await seed_business_and_principals(factory)
+    headers = await platform_headers(client, factory, admin_id)
+    body_a = {"waba_id": "2183193562429781", "whatsapp_phone_number_id": "1180291398493188"}
+    body_b = {"waba_id": "2183193562429781", "whatsapp_phone_number_id": "1180291398493189"}
+
+    first = await client.put(
+        f"/api/platform/businesses/{first_business_id}/whatsapp", json=body_a, headers=headers
+    )
+    second = await client.put(
+        f"/api/platform/businesses/{second_business_id}/whatsapp", json=body_b, headers=headers
+    )
+
+    assert first.status_code == 200, first.text
+    assert second.status_code == 200, second.text
+    assert first.json()["waba_id"] == second.json()["waba_id"] == "2183193562429781"
+    assert (await client.get(
+        f"/api/platform/businesses/{first_business_id}/whatsapp", headers=owner_headers
+    )).status_code == 401
+    async with factory() as db:
+        audits = (
+            await db.scalars(
+                select(AdminAuditEvent).where(
+                    AdminAuditEvent.action == "business.whatsapp.configure",
+                    AdminAuditEvent.admin_id == admin_id,
+                )
+            )
+        ).all()
+        assert len(audits) == 2
+        assert all(a.details is None for a in audits)
