@@ -34,6 +34,7 @@ import type {
   PlatformBusiness,
   PlatformInvitation,
   PlatformBusinessPage,
+  PlatformWhatsAppConfig,
   PlatformInvitationPage,
   AdminAuditPage,
   PlatformMetricsResponse,
@@ -105,13 +106,11 @@ type RawBusiness = {
   owner_id?: number
   name: string
   phone_number?: string
-  category?: string
+  category?: string | null
   description?: string | null
   address?: string | null
   latitude?: number | null
   longitude?: number | null
-  whatsapp_phone_number_id?: string | null
-  waba_id?: string | null
   config_json?: Record<string, unknown> | null
   is_active?: boolean
   daily_notification_enabled?: boolean
@@ -196,7 +195,7 @@ const mapBusiness = (raw: RawBusiness): Business => ({
   id: raw.id,
   owner: raw.owner_id || 0,
   name: raw.name,
-  category: raw.category || 'barbershop',
+  category: raw.category ?? undefined,
   description: raw.description || undefined,
   phone: raw.phone_number || '',
   email: undefined,
@@ -204,8 +203,6 @@ const mapBusiness = (raw: RawBusiness): Business => ({
   latitude: raw.latitude || undefined,
   longitude: raw.longitude || undefined,
   timezone: 'America/Santo_Domingo',
-  whatsapp_phone_number_id: raw.whatsapp_phone_number_id || undefined,
-  waba_id: raw.waba_id || undefined,
   config_json: raw.config_json || undefined,
   is_active: raw.is_active ?? true,
   daily_notification_enabled: raw.daily_notification_enabled ?? true,
@@ -537,6 +534,23 @@ export const platformAPI = {
     return data
   },
 
+  getWhatsAppConfig: async (businessId: number): Promise<PlatformWhatsAppConfig> => {
+    const { data } = await platformApi.get<PlatformWhatsAppConfig>(
+      `/platform/businesses/${businessId}/whatsapp`
+    )
+    return data
+  },
+
+  updateWhatsAppConfig: async (
+    businessId: number,
+    config: Pick<PlatformWhatsAppConfig, 'whatsapp_phone_number_id' | 'waba_id'>
+  ): Promise<PlatformWhatsAppConfig> => {
+    const { data } = await platformApi.put<PlatformWhatsAppConfig>(
+      `/platform/businesses/${businessId}/whatsapp`, config
+    )
+    return data
+  },
+
   setBusinessActive: async (businessId: number, active: boolean): Promise<PlatformBusiness> => {
     const action = active ? 'reactivate' : 'suspend'
     const { data } = await platformApi.post<PlatformBusiness>(
@@ -604,7 +618,6 @@ export const businessAPI = {
     const response = await api.post<RawBusiness>('/businesses/', {
       name: data.name,
       phone_number: data.phone,
-      category: data.category,
       description: data.description || undefined,
       address: data.address || undefined,
     })
@@ -618,6 +631,7 @@ export const businessAPI = {
 
   update: async (id: number, data: Partial<Business>): Promise<Business> => {
     const payload: Record<string, unknown> = { ...data }
+    delete payload.category
     if ('phone' in payload) {
       payload.phone_number = payload.phone
       delete payload.phone

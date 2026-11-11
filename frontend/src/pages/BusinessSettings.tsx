@@ -1,17 +1,8 @@
 import { useEffect, useState } from 'react'
-import { Building2, MessageCircle, Save } from 'lucide-react'
+import { Building2, Save } from 'lucide-react'
 import { toast } from 'sonner'
-import { Button, Card, CardContent, CardHeader, CardTitle, EmptyState, Input, Select } from '@/components/ui'
+import { Button, Card, CardContent, CardHeader, CardTitle, EmptyState, Input } from '@/components/ui'
 import { useBusinessStore } from '@/store/businessStore'
-
-const categoryOptions = [
-  { value: 'barbershop', label: 'Barbería' },
-  { value: 'beauty_salon', label: 'Salón de belleza' },
-  { value: 'medical', label: 'Consulta médica' },
-  { value: 'dental', label: 'Clínica dental' },
-  { value: 'professional', label: 'Servicio profesional' },
-  { value: 'other', label: 'Otro' },
-]
 
 export default function BusinessSettings() {
   const { currentBusiness, updateBusiness } = useBusinessStore()
@@ -19,11 +10,8 @@ export default function BusinessSettings() {
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
-    category: 'barbershop',
     description: '',
     address: '',
-    whatsapp_phone_number_id: '',
-    waba_id: '',
   })
 
   useEffect(() => {
@@ -31,11 +19,8 @@ export default function BusinessSettings() {
     setFormData({
       name: currentBusiness.name || '',
       phone: currentBusiness.phone || '',
-      category: currentBusiness.category || 'barbershop',
       description: currentBusiness.description || '',
       address: currentBusiness.address || '',
-      whatsapp_phone_number_id: currentBusiness.whatsapp_phone_number_id || '',
-      waba_id: currentBusiness.waba_id || '',
     })
   }, [currentBusiness])
 
@@ -53,11 +38,8 @@ export default function BusinessSettings() {
       await updateBusiness(currentBusiness.id, {
         name: formData.name.trim(),
         phone: formData.phone.trim(),
-        category: formData.category,
         description: formData.description.trim() || undefined,
         address: formData.address.trim() || undefined,
-        whatsapp_phone_number_id: formData.whatsapp_phone_number_id.trim() || undefined,
-        waba_id: formData.waba_id.trim() || undefined,
       })
       toast.success('Negocio actualizado correctamente')
     } catch (error) {
@@ -113,13 +95,6 @@ export default function BusinessSettings() {
               />
             </div>
 
-            <Select
-              label="Categoría"
-              value={formData.category}
-              onChange={(event) => setFormData({ ...formData, category: event.target.value })}
-              options={categoryOptions}
-            />
-
             <div>
               <label className="block text-sm font-semibold text-foreground mb-2">
                 Dirección
@@ -156,37 +131,6 @@ export default function BusinessSettings() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MessageCircle className="h-5 w-5 text-primary" />
-            WhatsApp Business
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Conecta el número de WhatsApp de tu negocio: copia los IDs desde Meta
-            Business Manager → WhatsApp → Configuración (Phone number ID y WABA ID).
-            Tu bot responderá a los mensajes que lleguen a ese número.
-          </p>
-          <div className="grid gap-4 md:grid-cols-2">
-            <Input
-              label="Phone number ID"
-              value={formData.whatsapp_phone_number_id}
-              onChange={(event) =>
-                setFormData({ ...formData, whatsapp_phone_number_id: event.target.value })
-              }
-              placeholder="e.g. 123456789012345"
-            />
-            <Input
-              label="WABA ID"
-              value={formData.waba_id}
-              onChange={(event) => setFormData({ ...formData, waba_id: event.target.value })}
-              placeholder="e.g. 123456789012345"
-            />
-          </div>
-        </CardContent>
-      </Card>
     </div>
   )
 }

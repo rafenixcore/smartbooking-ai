@@ -202,6 +202,8 @@ async def verify_webhook(request: Request):
 @app.post("/webhooks/telegram")
 async def telegram_webhook(request: Request):
     """Webhook Telegram: un solo bot, tenant por vínculo usuario↔negocio."""
+    if not config.TELEGRAM_ENABLED:
+        raise HTTPException(status_code=410, detail="Telegram está temporalmente desactivado")
     # Si TELEGRAM_WEBHOOK_SECRET está configurado, solo se acepta la cabecera
     # que Telegram firma con ese valor. Sin la variable, el bot sigue igual.
     if not telegram_secret_is_valid(

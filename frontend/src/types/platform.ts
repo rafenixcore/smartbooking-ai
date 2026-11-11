@@ -21,6 +21,14 @@ export interface PlatformBusinessPage {
   limit: number
 }
 
+export interface PlatformWhatsAppConfig {
+  business_id: number
+  whatsapp_phone_number_id: string | null
+  waba_id: string | null
+  credentials_configured: boolean
+  status: 'unconfigured' | 'ids_saved'
+}
+
 export interface PlatformInvitation {
   id: number
   email: string

@@ -304,7 +304,7 @@ export function Calendar() {
             <EmptyState
               icon={<CalendarClock className="h-6 w-6" />}
               title="Calendario listo para tus citas"
-              description="Completa servicios, horarios y clientes para crear citas manuales. Las citas de Telegram también aparecerán aquí."
+              description="Completa servicios, horarios y clientes para crear citas manuales. Las citas de WhatsApp también aparecerán aquí."
             />
           ) : (
             <div className="h-[500px] md:h-[700px]">

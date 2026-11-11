@@ -32,7 +32,7 @@ async def seed():
         
         if not business:
             business = Business(
-                name="Barbería Royale",
+                name="Negocio Demo",
                 phone_number="+18095551234",
                 whatsapp_phone_number_id="WBID_TEST_001",
                 address="Av. Churchill 123",
@@ -49,7 +49,7 @@ async def seed():
         
         if not service:
             service = Service(
-                name="Corte de Cabello",
+                name="Servicio de ejemplo",
                 duration_minutes=30,
                 price=500.0,
                 business_id=business.id

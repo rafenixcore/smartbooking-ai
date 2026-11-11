@@ -62,6 +62,7 @@ class Config:
     TELEGRAM_BOT_USERNAME = os.getenv("TELEGRAM_BOT_USERNAME", "").lstrip("@")
     # Opcional: si se define, el webhook exige que Telegram firme con este valor.
     TELEGRAM_WEBHOOK_SECRET = os.getenv("TELEGRAM_WEBHOOK_SECRET")
+    TELEGRAM_ENABLED = _bool_env("TELEGRAM_ENABLED", False)
 
     # Registro: si false (MVP), el registro activa la cuenta directamente
     # (reemplaza al antiguo AUTO_VERIFY_EMAIL, invertido)

@@ -69,9 +69,9 @@ class Business(Base):
     name = Column(String, nullable=False)
     phone_number = Column(String, unique=True, nullable=False)  # Business Contact Number
     whatsapp_phone_number_id = Column(String, unique=True, nullable=True)  # Meta Phone Number ID
-    waba_id = Column(String, unique=True, nullable=True)  # Meta WhatsApp Business Account ID
+    waba_id = Column(String, nullable=True, index=True)  # Shared Meta WhatsApp account identifier
     config_json = Column(JSON, nullable=True)  # Config per-tenant (plantilla, políticas, etc.)
-    category = Column(String, nullable=True, default="barbershop") # barbershop, medical, spa, etc.
+    category = Column(String, nullable=True)
     description = Column(Text, nullable=True)
     address = Column(String, nullable=True)
     latitude = Column(Float, nullable=True)

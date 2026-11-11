@@ -75,7 +75,7 @@ export default function TestUI() {
                                 JD
                             </div>
                             <h3 className="font-semibold text-lg">John Doe</h3>
-                            <p className="text-sm text-muted-foreground mb-4">Professional Barber</p>
+                            <p className="text-sm text-muted-foreground mb-4">Negocio de servicios</p>
                             <div className="flex justify-center gap-2">
                                 <Badge variant="default">Active</Badge>
                                 <Badge variant="secondary">Pro</Badge>

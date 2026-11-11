@@ -198,7 +198,7 @@ export function Customers() {
                           <EmptyState
                             icon={<Users className="h-6 w-6" />}
                             title="Aún no tienes clientes"
-                            description="Puedes crearlos manualmente o dejar que aparezcan cuando un cliente escriba por Telegram."
+                            description="Puedes crearlos manualmente o dejar que aparezcan cuando un cliente escriba por WhatsApp."
                             actionLabel="Nuevo cliente"
                             onAction={() => handleOpenModal()}
                           />

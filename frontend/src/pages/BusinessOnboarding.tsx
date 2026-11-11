@@ -36,7 +36,7 @@ export default function BusinessOnboarding({ compact = false, onCreated }: Busin
     setError(null)
 
     try {
-      // Categoría/ubicación diferidas post-MVP (fase 1): el backend las tolera opcionales
+      // La ubicación y la descripción son opcionales durante el alta.
       const profile = {
         name: form.name.trim(),
         phone: form.phone.trim(),
@@ -139,7 +139,7 @@ function BusinessForm({
           required
           value={form.name}
           onChange={(event) => setForm({ ...form, name: event.target.value })}
-          placeholder="Ej. Barbería Excelencia"
+          placeholder="Ej. Mi negocio"
         />
         <Input
           label="Teléfono del negocio"
@@ -166,7 +166,7 @@ function BusinessForm({
           onChange={(event) => setForm({ ...form, description: event.target.value })}
           rows={4}
           className="flex w-full rounded-control border border-input bg-background px-3 py-3 text-sm transition-colors placeholder:text-muted-foreground hover:border-primary/40 focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25"
-          placeholder="Opcional. Ej. Cortes clásicos, barba y atención por cita."
+          placeholder="Opcional. Describe tus servicios y cualquier información útil para tus clientes."
         />
       </div>
 
@@ -178,10 +178,6 @@ function BusinessForm({
         <div className="flex items-center gap-2">
           <Phone className="h-4 w-4 text-primary" />
           Citas y clientes
-        </div>
-        <div className="flex items-center gap-2">
-          <MapPin className="h-4 w-4 text-primary" />
-          Integración con Telegram
         </div>
       </div>
 

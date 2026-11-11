@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Search, Calendar as CalendarIcon, Clock, CalendarClock, Users, Scissors } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, Calendar as CalendarIcon, Clock, CalendarClock, Users, ClipboardList } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button, Input, Modal, Select, Card, CardContent, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Badge, Skeleton, ConfirmationModal, EmptyState } from '@/components/ui';
 import { appointmentsAPI, customersAPI, servicesAPI, scheduleAPI } from '@/services/api';
@@ -255,7 +255,7 @@ export function Appointments() {
           <CardContent className="p-5">
             <div className="grid gap-3 md:grid-cols-3">
               <div className="flex items-center gap-3 text-sm">
-                <Scissors className={hasActiveServices ? 'h-5 w-5 text-green-600' : 'h-5 w-5 text-muted-foreground'} />
+                <ClipboardList className={hasActiveServices ? 'h-5 w-5 text-green-600' : 'h-5 w-5 text-muted-foreground'} />
                 <span className={hasActiveServices ? 'text-foreground' : 'text-muted-foreground'}>
                   Servicio activo
                 </span>
@@ -345,7 +345,7 @@ export function Appointments() {
                             <EmptyState
                               icon={<CalendarIcon className="h-6 w-6" />}
                               title="Todavía no hay citas"
-                              description="Crea una cita manual cuando tengas cliente, servicio y horario, o comparte tu enlace de Telegram."
+                              description="Crea una cita manual cuando tengas cliente, servicio y horario, o permite que tus clientes escriban por WhatsApp."
                               actionLabel={canCreateAppointment ? 'Nueva cita' : undefined}
                               onAction={canCreateAppointment ? () => handleOpenModal() : undefined}
                             />
@@ -444,7 +444,7 @@ export function Appointments() {
                   <EmptyState
                     icon={<CalendarIcon className="h-6 w-6" />}
                     title="Todavía no hay citas"
-                    description="Cuando tus clientes agenden por Telegram o crees citas manuales, aparecerán aquí."
+                    description="Cuando tus clientes agenden por WhatsApp o crees citas manuales, aparecerán aquí."
                     actionLabel={canCreateAppointment ? 'Nueva cita' : undefined}
                     onAction={canCreateAppointment ? () => handleOpenModal() : undefined}
                   />

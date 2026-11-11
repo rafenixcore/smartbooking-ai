@@ -43,7 +43,7 @@ export interface Business {
   id: number
   owner: number
   name: string
-  category: string
+  category?: string | null
   description?: string
   phone: string
   email?: string
@@ -51,8 +51,6 @@ export interface Business {
   latitude?: number
   longitude?: number
   timezone: string
-  whatsapp_phone_number_id?: string
-  waba_id?: string
   config_json?: Record<string, unknown>
   is_active: boolean
   daily_notification_enabled: boolean
@@ -64,8 +62,6 @@ export interface Business {
 export interface BusinessFormData {
   name: string
   phone: string
-  // Categoría/ubicación diferidas post-MVP (fase 1): el backend las tolera opcionales
-  category?: string
   description?: string
   address?: string
 }

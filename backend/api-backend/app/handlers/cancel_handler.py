@@ -189,7 +189,7 @@ async def handle_cancel_appointment(nlu_result: Dict, context: Dict) -> str:
                 f"Tu cita:\n"
                 f"📅 {date_str}\n"
                 f"⏰ {time_str}\n"
-                f"✂️ {service_name}\n\n"
+                f"📋 {service_name}\n\n"
                 "¿Confirmás que querés cancelarla?",
                 keyboard=telegram_ui.with_footer(telegram_ui.cancel_confirm_buttons()),
             )
@@ -255,7 +255,7 @@ async def handle_cancel_appointment(nlu_result: Dict, context: Dict) -> str:
                         f"Vas a cancelar:\n"
                         f"📅 {date_str}\n"
                         f"⏰ {time_str}\n"
-                        f"✂️ {service_name}\n\n"
+                        f"📋 {service_name}\n\n"
                         "¿Confirmás la cancelación?",
                         keyboard=telegram_ui.with_footer(telegram_ui.cancel_confirm_buttons()),
                     )

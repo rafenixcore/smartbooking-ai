@@ -4,8 +4,8 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useBusinessStore } from '@/store/businessStore'
-import { dashboardAPI, appointmentsAPI, servicesAPI, scheduleAPI, telegramAPI } from '@/services/api'
-import type { DashboardMetrics, Appointment, Service, ScheduleRule, TelegramActivation } from '@/types'
+import { dashboardAPI, appointmentsAPI, servicesAPI, scheduleAPI } from '@/services/api'
+import type { DashboardMetrics, Appointment, Service, ScheduleRule } from '@/types'
 import { formatCurrency, formatDate, formatTime } from '@/utils/formatters'
 import {
   Calendar,
@@ -17,8 +17,7 @@ import {
   CreditCard,
   CheckCircle2,
   Circle,
-  MessageCircle,
-  Scissors,
+  ClipboardList,
   CalendarClock,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
@@ -32,7 +31,6 @@ export default function Dashboard() {
   const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([])
   const [services, setServices] = useState<Service[]>([])
   const [scheduleRules, setScheduleRules] = useState<ScheduleRule[]>([])
-  const [telegramActivation, setTelegramActivation] = useState<TelegramActivation | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
@@ -52,20 +50,17 @@ export default function Dashboard() {
         appointmentsResult,
         servicesResult,
         scheduleResult,
-        telegramResult,
       ] = await Promise.allSettled([
         dashboardAPI.getMetrics(currentBusiness.id),
         appointmentsAPI.list(currentBusiness.id, today, today),
         servicesAPI.list(currentBusiness.id),
         scheduleAPI.list(currentBusiness.id),
-        telegramAPI.getActivation(currentBusiness.id),
       ])
 
       if (metricsResult.status === 'fulfilled') setMetrics(metricsResult.value)
       if (appointmentsResult.status === 'fulfilled') setTodayAppointments(appointmentsResult.value)
       if (servicesResult.status === 'fulfilled') setServices(servicesResult.value)
       if (scheduleResult.status === 'fulfilled') setScheduleRules(scheduleResult.value)
-      if (telegramResult.status === 'fulfilled') setTelegramActivation(telegramResult.value)
     } catch (error) {
       console.error('Error loading dashboard:', error)
     } finally {
@@ -153,7 +148,6 @@ export default function Dashboard() {
 
   const hasServices = services.some((service) => service.is_active)
   const hasSchedule = scheduleRules.some((rule) => rule.is_available)
-  const hasTelegramLink = Boolean(telegramActivation?.deep_link || telegramActivation?.invite_token)
   const hasAppointment = todayAppointments.length > 0 || metrics.week.total_appointments > 0
   const setupSteps = [
     {
@@ -168,7 +162,7 @@ export default function Dashboard() {
       description: 'Agrega al menos un servicio activo',
       done: hasServices,
       href: '/services',
-      icon: Scissors,
+      icon: ClipboardList,
     },
     {
       label: 'Configurar horarios',
@@ -176,13 +170,6 @@ export default function Dashboard() {
       done: hasSchedule,
       href: '/schedule',
       icon: CalendarClock,
-    },
-    {
-      label: 'Activar Telegram',
-      description: 'Copia el enlace para tus clientes',
-      done: hasTelegramLink,
-      href: '/telegram',
-      icon: MessageCircle,
     },
     {
       label: 'Primera cita',

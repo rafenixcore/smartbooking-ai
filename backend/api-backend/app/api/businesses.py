@@ -104,8 +104,7 @@ async def update_business(business_id: int, business_in: BusinessUpdate, db: Asy
     try:
         await db.commit()
     except IntegrityError:
-        # UniqueConstraint en whatsapp_phone_number_id/waba_id: otro negocio ya
-        # tiene ese número de WhatsApp registrado.
+        # El Phone Number ID es único: otro negocio ya tiene ese número registrado.
         await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -139,6 +138,8 @@ async def get_telegram_activation(
     db: AsyncSession = Depends(get_db),
     current_owner: Owner = Depends(get_current_owner),
 ):
+    if not config.TELEGRAM_ENABLED:
+        raise HTTPException(status_code=410, detail="Telegram está temporalmente desactivado")
     result = await db.execute(
         select(Business).filter(Business.id == business_id, Business.owner_id == current_owner.id)
     )
@@ -169,6 +170,8 @@ async def get_owner_telegram_activation(
     db: AsyncSession = Depends(get_db),
     current_owner: Owner = Depends(get_current_owner),
 ):
+    if not config.TELEGRAM_ENABLED:
+        raise HTTPException(status_code=410, detail="Telegram está temporalmente desactivado")
     result = await db.execute(
         select(Business).filter(Business.id == business_id, Business.owner_id == current_owner.id)
     )
@@ -213,6 +216,8 @@ async def unlink_owner_telegram(
     db: AsyncSession = Depends(get_db),
     current_owner: Owner = Depends(get_current_owner),
 ):
+    if not config.TELEGRAM_ENABLED:
+        raise HTTPException(status_code=410, detail="Telegram está temporalmente desactivado")
     result = await db.execute(
         select(Business).filter(Business.id == business_id, Business.owner_id == current_owner.id)
     )
@@ -232,6 +237,8 @@ async def unlink_customer_telegram_bindings(
     db: AsyncSession = Depends(get_db),
     current_owner: Owner = Depends(get_current_owner),
 ):
+    if not config.TELEGRAM_ENABLED:
+        raise HTTPException(status_code=410, detail="Telegram está temporalmente desactivado")
     result = await db.execute(
         select(Business).filter(Business.id == business_id, Business.owner_id == current_owner.id)
     )
@@ -248,6 +255,8 @@ async def rotate_telegram_invite(
     db: AsyncSession = Depends(get_db),
     current_owner: Owner = Depends(get_current_owner),
 ):
+    if not config.TELEGRAM_ENABLED:
+        raise HTTPException(status_code=410, detail="Telegram está temporalmente desactivado")
     result = await db.execute(
         select(Business).filter(Business.id == business_id, Business.owner_id == current_owner.id)
     )

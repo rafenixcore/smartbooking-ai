@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from typing import Optional, List
 from datetime import date, datetime, time
 
@@ -91,16 +91,15 @@ class OwnerInvitationPreviewOut(BaseModel):
 class BusinessBase(BaseModel):
     name: str
     phone_number: str
-    category: Optional[str] = "barbershop"
+    category: Optional[str] = None
     description: Optional[str] = None
     address: Optional[str] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     is_active: bool = True
     daily_notification_enabled: bool = True
-    whatsapp_phone_number_id: Optional[str] = None
-    waba_id: Optional[str] = None
     config_json: Optional[dict] = None
+    model_config = ConfigDict(extra="forbid")
 
 class BusinessCreate(BusinessBase):
     pass
@@ -115,22 +114,8 @@ class BusinessUpdate(BaseModel):
     longitude: Optional[float] = None
     is_active: Optional[bool] = None
     daily_notification_enabled: Optional[bool] = None
-    whatsapp_phone_number_id: Optional[str] = None
-    waba_id: Optional[str] = None
     config_json: Optional[dict] = None
-
-    @field_validator("whatsapp_phone_number_id", "waba_id")
-    @classmethod
-    def _clean_wa_ids(cls, v):
-        """Solo forma: blank → None, máx 64 chars. Sin isdigit (ids de test no numéricos)."""
-        if v is None:
-            return v
-        v = str(v).strip()
-        if not v:
-            return None
-        if len(v) > 64:
-            raise ValueError("máximo 64 caracteres")
-        return v
+    model_config = ConfigDict(extra="forbid")
 
 class BusinessOut(BusinessBase):
     id: int

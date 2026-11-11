@@ -82,7 +82,7 @@ async def handle_check_appointment(nlu_result: Dict, context: Dict) -> BotReply:
             lines.append(f"{status_emoji} **Cita {i}**")
             lines.append(f"   📅 {date_str}")
             lines.append(f"   ⏰ {time_str}")
-            lines.append(f"   ✂️ {service_name}")
+            lines.append(f"   📋 {service_name}")
             lines.append(f"   📍 {business_name}")
             lines.append("")
 

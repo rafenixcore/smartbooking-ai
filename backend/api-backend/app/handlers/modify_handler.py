@@ -166,7 +166,7 @@ async def handle_modify_appointment(nlu_result: Dict, context: Dict) -> str:
                     f"Tu cita actual:\n"
                     f"📅 {date_str}\n"
                     f"⏰ {time_str}\n"
-                    f"✂️ {service_name}\n\n"
+                    f"📋 {service_name}\n\n"
                     "¿Para cuándo querés reagendarla?",
                     keyboard=telegram_ui.with_footer(telegram_ui.day_buttons(days)),
                 )
@@ -456,7 +456,7 @@ async def handle_modify_appointment(nlu_result: Dict, context: Dict) -> str:
                 "✅ ¡Listo! Tu cita se reagendó exitosamente\n\n"
                 f"📅 Nueva fecha: {date_out}\n"
                 f"⏰ Nueva hora: {selected_slot['start_time']}\n"
-                f"✂️ {service_name}",
+                f"📋 {service_name}",
                 customer_name,
             )
 

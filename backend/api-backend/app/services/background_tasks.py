@@ -2,6 +2,7 @@ import html
 import logging
 from datetime import datetime, timedelta, timezone
 from sqlalchemy.future import select
+from app.config import config
 from app.core.database import AsyncSessionLocal
 from app.models import Appointment, Customer, Service, WaitlistEntry, Business
 from app.services import db_service
@@ -54,11 +55,14 @@ async def _send_window_reminders(db, window_start, window_end, label, flag_attr)
     for appt, customer, service, business in result.all():
         phone = (customer.phone_number if customer else "") or ""
         if phone.startswith("tg:"):
+            if not config.TELEGRAM_ENABLED:
+                logger.info("reminder_skip_telegram_disabled business=%s appt=%s", appt.business_id, appt.id)
+                continue
             chat_id = phone[3:]
             message = (
                 "📅 <b>Recordatorio de tu cita</b>\n\n"
                 f"📍 {html.escape((business.name if business else '') or 'Negocio')}\n"
-                f"✂️ {html.escape(service.name if service else 'Servicio')}\n"
+                f"📋 {html.escape(service.name if service else 'Servicio')}\n"
                 f"📅 {format_date_human_es(appt.date.strftime('%Y-%m-%d'))}\n"
                 f"⏰ {appt.date.strftime('%I:%M %p').lstrip('0')}\n"
             )

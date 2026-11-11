@@ -615,7 +615,7 @@ async def _handle_inline_callback(
             f"Vas a cancelar:\n"
             f"📅 {start.strftime('%A %d de %B')}\n"
             f"⏰ {start.strftime('%I:%M %p')}\n"
-            f"✂️ {appt['service_name']}\n\n"
+            f"📋 {appt['service_name']}\n\n"
             "¿Confirmás la cancelación?",
             keyboard=telegram_ui.with_footer(telegram_ui.cancel_confirm_buttons()),
         )

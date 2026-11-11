@@ -165,7 +165,7 @@ def _build_confirmation_text(
     return BotReply(
         f"Perfecto, <b>{who}</b>. La hora <b>{hour}</b> está disponible.\n\n"
         "Resumen de la cita:\n"
-        f"✂️ Servicio: {service_name}\n"
+        f"📋 Servicio: {service_name}\n"
         f"📅 Fecha: {date_show}\n"
         f"⏰ Hora: {hour}\n\n"
         "¿Confirmo esta cita?",
@@ -849,7 +849,7 @@ async def handle_booking_confirmation(nlu_result: Dict, context: Dict) -> str:
             f"👤 {customer_name or 'Cliente'}\n"
             f"📅 {format_date_human_es(pending_data.get('date') or '')}\n"
             f"⏰ {selected_slot.get('start_time')}\n"
-            f"✂️ {pending_data.get('service', 'servicio')}\n"
+            f"📋 {pending_data.get('service', 'servicio')}\n"
             f"📍 {business.get('name', '')}\n"
             f"    {business.get('address', '')}",
             customer_name,

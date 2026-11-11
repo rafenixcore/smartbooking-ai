@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Scissors } from 'lucide-react';
+import { Plus, Edit2, Trash2, ClipboardList } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button, Input, Modal, Card, CardContent, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Badge, Skeleton, ConfirmationModal, EmptyState } from '@/components/ui';
 import { servicesAPI } from '@/services/api';
@@ -192,9 +192,9 @@ export function Services() {
                     <TableRow>
                       <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                         <EmptyState
-                          icon={<Scissors className="h-6 w-6" />}
+                          icon={<ClipboardList className="h-6 w-6" />}
                           title="Crea tu primer servicio"
-                          description="Los servicios son lo que tus clientes podrán reservar por Telegram o desde el panel."
+                          description="Los servicios son lo que tus clientes podrán reservar por WhatsApp o desde el panel."
                           actionLabel="Nuevo servicio"
                           onAction={() => handleOpenModal()}
                         />
@@ -277,7 +277,7 @@ export function Services() {
             <Card>
               <CardContent>
                 <EmptyState
-                  icon={<Scissors className="h-6 w-6" />}
+                  icon={<ClipboardList className="h-6 w-6" />}
                   title="Crea tu primer servicio"
                   description="Agrega duración y precio para que el sistema pueda organizar las citas."
                   actionLabel="Nuevo servicio"

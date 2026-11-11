@@ -8,11 +8,10 @@ import {
   LayoutDashboard,
   Calendar,
   Users,
-  Scissors,
+  ClipboardList,
   Clock,
   CalendarClock,
   LogOut,
-  MessageCircle,
   Settings,
 } from 'lucide-react'
 import { cn } from '@/utils/cn'
@@ -23,9 +22,8 @@ const navigation = [
   { name: 'Calendario', href: '/calendar', icon: Calendar },
   { name: 'Citas', href: '/appointments', icon: Clock },
   { name: 'Clientes', href: '/customers', icon: Users },
-  { name: 'Servicios', href: '/services', icon: Scissors },
+  { name: 'Servicios', href: '/services', icon: ClipboardList },
   { name: 'Horarios', href: '/schedule', icon: CalendarClock },
-  { name: 'Telegram', href: '/telegram', icon: MessageCircle },
   { name: 'Configuración', href: '/settings', icon: Settings },
 ]
 

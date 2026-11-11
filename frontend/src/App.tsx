@@ -22,7 +22,6 @@ const Appointments = lazy(() => import('./pages/Appointments').then((mod) => ({ 
 const Customers = lazy(() => import('./pages/Customers').then((mod) => ({ default: mod.Customers })))
 const Services = lazy(() => import('./pages/Services').then((mod) => ({ default: mod.Services })))
 const Schedule = lazy(() => import('./pages/Schedule').then((mod) => ({ default: mod.Schedule })))
-const TelegramIntegration = lazy(() => import('./pages/TelegramIntegration'))
 const BusinessSettings = lazy(() => import('./pages/BusinessSettings'))
 const AdminLogin = lazy(() => import('./pages/platform/AdminLogin'))
 const AdminRoutes = lazy(() => import('./pages/platform/AdminRoutes'))
@@ -104,7 +103,6 @@ function App() {
                 <Route path="customers" element={<Customers />} />
                 <Route path="services" element={<Services />} />
                 <Route path="schedule" element={<Schedule />} />
-                <Route path="telegram" element={<TelegramIntegration />} />
                 <Route path="settings" element={<BusinessSettings />} />
               </Route>
 
